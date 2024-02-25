@@ -1,3 +1,9 @@
+"""
+file that describes a database initialization and connectivity
+"""
+
+from typing import Callable, Optional
+
 import sqlalchemy as sa
 import sqlalchemy.ext.declarative as dec
 import sqlalchemy.orm as orm
@@ -6,20 +12,21 @@ from sqlalchemy.orm import Session
 SqlAlchemyBase = dec.declarative_base()
 
 # Global variable to store the SQLAlchemy session factory
-__factory = None
+__factory: Optional[Callable] = None
 
 
-def global_init(db_file, drop_db=False):
+def global_init(db_file: str, modules_initializer: Optional[Callable], drop_db=False):
     """
     Initialize the global SQLAlchemy session factory and create or drop/create database tables.
 
-    Args:
-        db_file (str): The path to the SQLite database file.
-        drop_db (bool): Whether to drop and recreate the database tables.
+    :param db_file: The path to the SQLite database file.
+    :param modules_initializer: Function to initialize and create models
+    :param drop_db: Whether to drop and recreate the database tables.
+    :return: None
 
-    Raises:
-        Exception: If the database file is not provided.
+    :raises Exception: If the database file is not provided.
     """
+
     global __factory
 
     if __factory and not drop_db:
@@ -39,6 +46,8 @@ def global_init(db_file, drop_db=False):
         # Drop all tables if specified
         SqlAlchemyBase.metadata.drop_all(engine)
 
+    modules_initializer()
+
     # Create database tables if they don't exist
     SqlAlchemyBase.metadata.create_all(engine)
 
@@ -49,16 +58,14 @@ def create_session() -> Session:
     """
     Create a new SQLAlchemy session.
 
-    Returns:
-        Session: A new SQLAlchemy session.
+    :return: A new SQLAlchemy session.
+    :rtype: Session
 
-    Raises:
-        AttributeError: If the session factory is not initialized.
+    :raises AttributeError: If the session factory is not initialized.
     """
-    global __factory
 
     # Ensure the session factory is initialized
-    if not __factory:
+    if __factory is None:
         raise AttributeError("Session factory is not initialized.")
 
     # Create and return a new session
