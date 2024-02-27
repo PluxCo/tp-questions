@@ -1,14 +1,19 @@
 """Routes module that contains an abstract classes
 for sending information outside"""
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
-from answers import OpenRecord, TestRecord
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.answers import OpenRecord, TestRecord
 
 
 class PointsCalculator(ABC):
     """
     Abstract class that defines the interface for scoring records
     """
+
     @abstractmethod
     def score_open(self, record: OpenRecord) -> float:
         """
@@ -38,6 +43,7 @@ class MessageFactory(ABC):
     """
     Abstract class for presentation questions to user
     """
+
     @abstractmethod
     def create_open(self, record: OpenRecord) -> None:
         """

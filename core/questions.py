@@ -1,7 +1,6 @@
 """
 Files that describe the questions and specific types of questions
 """
-
 import enum
 from typing import List, Optional
 
@@ -9,7 +8,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from sqlalchemy_serializer import SerializerMixin
 
-from answers import Record, TestRecord, OpenRecord
+from core.answers import Record, TestRecord, OpenRecord
 from db_connector import SqlAlchemyBase
 
 

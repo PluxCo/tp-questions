@@ -1,16 +1,19 @@
 """File that describes records of an answers and specific behavior."""
+from __future__ import annotations
 
 import datetime
 import enum
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 
 from db_connector import SqlAlchemyBase
-from questions import Question
-from routes import PointsCalculator, MessageFactory
+
+if TYPE_CHECKING:
+    from core.questions import Question
+    from core.routes import PointsCalculator, MessageFactory
 
 
 class AnswerState(enum.Enum):
