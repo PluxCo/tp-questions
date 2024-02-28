@@ -1,72 +1,62 @@
 """
 file that describes a database initialization and connectivity
 """
-
+import logging
 from typing import Callable, Optional
 
-import sqlalchemy as sa
-import sqlalchemy.ext.declarative as dec
-import sqlalchemy.orm as orm
-from sqlalchemy.orm import Session
+import sqlalchemy
+from sqlalchemy import Engine
+from sqlalchemy.ext import declarative
+from sqlalchemy.orm import sessionmaker
 
-SqlAlchemyBase = dec.declarative_base()
+SqlAlchemyBase = declarative.declarative_base()
 
 # Global variable to store the SQLAlchemy session factory
 __factory: Optional[Callable] = None
 
 
-def global_init(db_file: str, modules_initializer: Optional[Callable], drop_db=False):
+class DBWorker:
     """
-    Initialize the global SQLAlchemy session factory and create or drop/create database tables.
-
-    :param db_file: The path to the SQLite database file.
-    :param modules_initializer: Function to initialize and create models
-    :param drop_db: Whether to drop and recreate the database tables.
-    :return: None
-
-    :raises Exception: If the database file is not provided.
+    A wrapper around an SQLAlchemy session object.
     """
+    _engine: Optional[Engine] = None
+    _maker: Optional[Callable] = None
 
-    global __factory
+    def __init__(self):
+        self.current_session = None
 
-    if __factory and not drop_db:
-        return
+    def __enter__(self):
+        if self._maker is None:
+            raise AttributeError("Session factory is not initialized.")
 
-    if not db_file or not db_file.strip():
-        raise Exception("Необходимо указать файл базы данных.")
+        self.current_session = self._maker()
+        return self.current_session
 
-    # Create a connection string for SQLite
-    conn_str = f'sqlite:///{db_file.strip()}?check_same_thread=False'
-    print(f"Подключение к базе данных по адресу {conn_str}")
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.current_session.close()
 
-    # Create an SQLAlchemy engine and session factory
-    engine = sa.create_engine(conn_str, echo=False)
+    @classmethod
+    def init_db_file(cls, url: str, modules_initializer: Callable = None, *args,
+                     force=False, **kwargs) -> None:
+        """
+        Initialize the database file with the given.
+        :param modules_initializer: Function to initialize and create models
+        :param url: Connection url to the database.
+        :param args: Args that would be passed to the :func:`sqlalchemy.create_engine`.
+        :param force: Param which forces to recreate the engine if it already exists.
+        :param kwargs: Kwargs that would be passed to the :func:`sqlalchemy.create_engine`.
+        :return: None
+        """
 
-    if drop_db:
-        # Drop all tables if specified
-        SqlAlchemyBase.metadata.drop_all(engine)
+        if not force and cls._engine is not None:
+            logging.warning("Engine is already initialized.")
+            return
 
-    modules_initializer()
+        cls._engine = sqlalchemy.create_engine(url, *args, **kwargs)
 
-    # Create database tables if they don't exist
-    SqlAlchemyBase.metadata.create_all(engine)
+        if modules_initializer is not None:
+            modules_initializer()
 
-    __factory = orm.sessionmaker(bind=engine)
+        SqlAlchemyBase.metadata.create_all(cls._engine)
 
-
-def create_session() -> Session:
-    """
-    Create a new SQLAlchemy session.
-
-    :return: A new SQLAlchemy session.
-    :rtype: Session
-
-    :raises AttributeError: If the session factory is not initialized.
-    """
-
-    # Ensure the session factory is initialized
-    if __factory is None:
-        raise AttributeError("Session factory is not initialized.")
-
-    # Create and return a new session
-    return __factory()
+        cls._maker = sessionmaker(bind=cls._engine)
