@@ -10,6 +10,7 @@ from sqlalchemy_serializer import SerializerMixin
 
 from core.answers import Record, TestRecord, OpenRecord
 from db_connector import SqlAlchemyBase
+from db_connector.types import TextJson
 
 
 class QuestionType(enum.Enum):
@@ -66,9 +67,11 @@ class Question(SqlAlchemyBase, SerializerMixin):
     groups: Mapped[List[QuestionGroupAssociation]] = relationship(cascade='all, delete-orphan')
     level: Mapped[int]
     article_url: Mapped[Optional[str]]
-    type: Mapped[QuestionType] = mapped_column(default=QuestionType.TEST)
 
-    __mapper_args__ = {"polymorphic_identity": "question", "polymorphic_on": type}
+    __mapper_args__ = {"polymorphic_identity": "question", "polymorphic_on": "type"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def init_record(self) -> Record:
         """
@@ -85,7 +88,7 @@ class TestQuestion(Question):
     :cvar options: (:class:`str`) JSON-encoded options for the question.
     """
 
-    options: Mapped[str] = mapped_column(nullable=True)
+    options = mapped_column(TextJson, nullable=True)
 
     __mapper_args__ = {"polymorphic_identity": "test"}
 
