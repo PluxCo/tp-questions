@@ -1,5 +1,5 @@
 """
-Files that describe the questions and specific types of questions
+File that describes the questions and specific types of questions
 """
 import enum
 from typing import List, Optional
@@ -15,11 +15,11 @@ from db_connector.types import TextJson
 
 class QuestionType(enum.Enum):
     """
-    Enumeration representing the type of AnswerRecord.
+    Enumeration which represents the type of AnswerRecord.
 
     Attributes:
         TEST (int): The question suggests answer in a test form.
-        OPEN (int): The question suggest answer in a text form.
+        OPEN (int): The question suggests answer in a text form.
     """
     TEST = 0
     OPEN = 1
@@ -77,7 +77,7 @@ class Question(SqlAlchemyBase, SerializerMixin):
 
     def init_record(self) -> Record:
         """
-        An abstract method that should return an instance of the associated record
+        An abstract method that returns an instance of the associated record
         :return: Record
         """
         return Record(question_id=self.id)

@@ -1,4 +1,4 @@
-"""Routes module that contains an abstract classes
+"""Routes module that contains abstract classes
 for sending information outside"""
 from __future__ import annotations
 
@@ -11,13 +11,13 @@ if TYPE_CHECKING:
 
 class PointsCalculator(ABC):
     """
-    Abstract class that defines the interface for scoring records
+    Abstract class that defines the interface to score records
     """
 
     @abstractmethod
     def score_open(self, record: OpenRecord) -> float:
         """
-        Method that score open records
+        Method that scores open records
 
         :param record: scorable open record
         :type record: OpenRecord
@@ -29,7 +29,7 @@ class PointsCalculator(ABC):
     @abstractmethod
     def score_test(self, record: TestRecord) -> float:
         """
-        Method that score test records
+        Method that scores test records
 
         :param record: scorable test record
         :type record: TestRecord
@@ -41,15 +41,15 @@ class PointsCalculator(ABC):
 
 class MessageFactory(ABC):
     """
-    Abstract class for presentation questions to user
+    Abstract class that presents questions to users
     """
 
     @abstractmethod
     def create_open(self, record: OpenRecord) -> None:
         """
-        Handle dispatching open records
+        Handles dispatching of open records
 
-        :param record: open record for presenting
+        :param record: open record to present
         :type record: OpenRecord
 
         :return: None
@@ -58,9 +58,9 @@ class MessageFactory(ABC):
     @abstractmethod
     def create_test(self, record: TestRecord) -> None:
         """
-        Handle dispatching test records
+        Handles dispatching of test records
 
-        :param record: test record for presenting
+        :param record: test record to present
         :type record: TestRecord
 
         :return: None

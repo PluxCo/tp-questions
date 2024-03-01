@@ -1,5 +1,5 @@
 """
-File that describes the custom sqlalchemy types.
+File that describes custom SQLAlchemy types.
 """
 import json
 
@@ -8,7 +8,7 @@ from sqlalchemy import types
 
 class TextJson(types.TypeDecorator):
     """
-    A json type for sqlalchemy models.
+    A json type for SQLAlchemy models.
     """
     impl = types.Unicode
 

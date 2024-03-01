@@ -1,5 +1,5 @@
 """
-file that describes a database initialization and connectivity
+File that describes a database initialization and connections
 """
 import logging
 from typing import Callable, Optional
@@ -19,6 +19,7 @@ class DBWorker:
     """
     A wrapper around an SQLAlchemy session object.
     """
+
     _engine: Optional[Engine] = None
     _maker: Optional[Callable] = None
 
@@ -31,7 +32,8 @@ class DBWorker:
     @property
     def session(self) -> Session:
         """
-        Property that returns a SQLAlchemy session object
+        Property that returns an SQLAlchemy session object
+
         :return: Session
         """
         if self._maker is None:
@@ -47,7 +49,8 @@ class DBWorker:
     @classmethod
     def init_db_file(cls, url: str, *args, force=False, **kwargs) -> None:
         """
-        Initialize the database file with the given.
+        Initialize the database file with the given parameters.
+
         :param url: Connection url to the database.
         :param args: Args that would be passed to the :func:`sqlalchemy.create_engine`.
         :param force: Param which forces to recreate the engine if it already exists.
@@ -70,7 +73,7 @@ class DBWorker:
     @classmethod
     def reset_connection(cls) -> None:
         """
-        Method that resets the connection to the database
+        Method that resets the connection of the database
         """
         cls._engine = None
         cls._maker = None

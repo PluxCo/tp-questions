@@ -181,16 +181,19 @@ class TestQuestionCRUDTestCase(unittest.TestCase):
 
         self.session.add(self.question)
         self.session.commit()
+
         record = self.question.init_record()
         record.ask_time = datetime.datetime.now()
         record.state = AnswerState.NOT_ANSWERED
         record.person_id = "1"
         self.session.add(record)
+
         record = self.question.init_record()
         record.ask_time = datetime.datetime.now()
         record.state = AnswerState.NOT_ANSWERED
         record.person_id = "1"
         self.session.add(record)
+
         self.session.commit()
 
     def tearDown(self):

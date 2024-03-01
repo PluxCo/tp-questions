@@ -1,4 +1,4 @@
-"""File that describes records of an answers and specific behavior."""
+"""File that describes records of answers and their specific behavior."""
 from __future__ import annotations
 
 import datetime
@@ -22,9 +22,10 @@ class AnswerState(enum.Enum):
 
     :cvar NOT_ANSWERED: The answer has not been provided.
     :cvar TRANSFERRED: The answer has been transferred to an external system.
-    :cvar PENDING: The answer pending review.
+    :cvar PENDING: The answer is pending for a review.
     :cvar ANSWERED: The answer has been provided.
     """
+
     NOT_ANSWERED = 0
     TRANSFERRED = 1
     PENDING = 3
@@ -33,7 +34,7 @@ class AnswerState(enum.Enum):
 
 class Record(SqlAlchemyBase, SerializerMixin):
     r"""
-    Abstract class that represents an answer record to a something question.
+    Abstract class that represents an answer record of a particular question.
 
     :cvar id: (:class:`int`) The primary key of the answer.
     :cvar type: (:class:`str`) The type of the answer
@@ -84,32 +85,32 @@ class Record(SqlAlchemyBase, SerializerMixin):
         """
         An abstract method that should score record and change :class:`AnswerState`
 
-        :param calculator: calculator that should be used to calculating points
+        :param calculator: calculator that should be used to calculate points
         :type calculator: PointsCalculator
 
-        :return: points that be applied
+        :return: points that should be applied
         :rtype: float
         """
 
     def dispatch(self, factory: MessageFactory):
         """
-        An abstract method that should dispatch questions to associated factory
+        An abstract method that dispatches questions to associated factory
 
-        :param factory: factory that handle dispatching records
+        :param factory: factory that handles dispatched records
         :type factory: MessageFactory
 
         :return: None
         """
 
     def transfer(self):
-        """Method that change :class:`RecordState` after transferring"""
+        """Method that changes :class:`RecordState` after transferring"""
 
         # noinspection PyTypeChecker
         self.state = AnswerState.TRANSFERRED
 
     def set_answer(self, answer: str) -> None:
         """
-        Method that set the user answer
+        Method that sets the user answer
 
         :param answer: user answer
         :type answer: str
@@ -123,7 +124,7 @@ class Record(SqlAlchemyBase, SerializerMixin):
 
 class TestRecord(Record):
     """
-    TestRecord is instance of :class:`Record`
+    TestRecord is an instance of :class:`Record`
     """
 
     __mapper_args__ = {"polymorphic_identity": "test"}
@@ -141,7 +142,7 @@ class TestRecord(Record):
 
 class OpenRecord(Record):
     """
-    OpenRecord is instance of :class:`Record`
+    OpenRecord is an instance of :class:`Record`
     """
 
     __mapper_args__ = {"polymorphic_identity": "open"}
