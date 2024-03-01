@@ -68,6 +68,8 @@ class Question(SqlAlchemyBase, SerializerMixin):
     level: Mapped[int]
     article_url: Mapped[Optional[str]]
 
+    _records: Mapped[List[Record]] = relationship(cascade='all, delete-orphan')
+
     __mapper_args__ = {"polymorphic_identity": "question", "polymorphic_on": "type"}
 
     def __init__(self, *args, **kwargs):
@@ -78,7 +80,7 @@ class Question(SqlAlchemyBase, SerializerMixin):
         An abstract method that should return an instance of the associated record
         :return: Record
         """
-        return Record()
+        return Record(question_id=self.id)
 
 
 class TestQuestion(Question):
@@ -98,7 +100,7 @@ class TestQuestion(Question):
 
         :return: TestRecord
         """
-        return TestRecord()
+        return TestRecord(question_id=self.id)
 
 
 class OpenQuestion(Question):
@@ -114,4 +116,4 @@ class OpenQuestion(Question):
 
         :return: OpenRecord
         """
-        return OpenRecord()
+        return OpenRecord(question_id=self.id)

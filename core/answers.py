@@ -63,6 +63,20 @@ class Record(SqlAlchemyBase, SerializerMixin):
 
     __mapper_args__ = {"polymorphic_identity": "record", "polymorphic_on": "type"}
 
+    def __init__(self, *args, **kwargs):
+        r""":key id: (:class:`int`) The primary key of the answer.
+        :key type: (:class:`str`) The type of the answer
+        :key question_id: (:class:`int`) Foreign key referencing the questions table.
+        :key question: (:class:`Question`) Relationship to the corresponding question.
+        :key person_id: (:class:`str`) The ID of the person providing the answer.
+        :key person_answer: (:class:`Optional`\[:class:`str`]) The answer provided by the person.
+        :key answer_time: (:class:`Optional`\[:class:`datetime.datetime`]) The time when the answer was provided.
+        :key ask_time: (:class:`datetime.datetime`) The time when the question was asked.
+        :key state: (:class:`AnswerState`) The state of the answer.
+        :key points: (:class:`int`) Amount of points scored for this answer (from 0 to 1)
+        """
+        super().__init__(*args, **kwargs)
+
     def __repr__(self):
         return f"<AnswerRecord(q_id={self.question_id}, state={self.state}, person_id={self.person_id})>"
 
@@ -108,6 +122,10 @@ class Record(SqlAlchemyBase, SerializerMixin):
 
 
 class TestRecord(Record):
+    """
+    TestRecord is instance of :class:`Record`
+    """
+
     __mapper_args__ = {"polymorphic_identity": "test"}
 
     # noinspection PyTypeChecker
@@ -122,6 +140,10 @@ class TestRecord(Record):
 
 
 class OpenRecord(Record):
+    """
+    OpenRecord is instance of :class:`Record`
+    """
+
     __mapper_args__ = {"polymorphic_identity": "open"}
 
     # noinspection PyTypeChecker
