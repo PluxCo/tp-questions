@@ -68,7 +68,7 @@ class Question(SqlAlchemyBase, SerializerMixin):
     level: Mapped[int]
     article_url: Mapped[Optional[str]]
 
-    _records: Mapped[List[Record]] = relationship(cascade='all, delete-orphan')
+    _records: Mapped[List[Record]] = relationship(cascade='all, delete-orphan', back_populates='question')
 
     __mapper_args__ = {"polymorphic_identity": "question", "polymorphic_on": "type"}
 
@@ -92,7 +92,7 @@ class TestQuestion(Question):
 
     options = mapped_column(TextJson, nullable=True)
 
-    __mapper_args__ = {"polymorphic_identity": "test"}
+    __mapper_args__ = {"polymorphic_identity": "TEST"}
 
     def init_record(self) -> Record:
         """
@@ -108,7 +108,7 @@ class OpenQuestion(Question):
     Represents an open question.
     """
 
-    __mapper_args__ = {"polymorphic_identity": "open"}
+    __mapper_args__ = {"polymorphic_identity": "OPEN"}
 
     def init_record(self) -> Record:
         """

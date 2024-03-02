@@ -54,7 +54,7 @@ class Record(SqlAlchemyBase, SerializerMixin):
     type: Mapped[str]
 
     question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
-    question: Mapped["Question"] = relationship(lazy="joined")
+    question: Mapped["Question"] = relationship(lazy="joined",  back_populates="_records")
     person_id: Mapped[str]
     person_answer: Mapped[Optional[str]]
     answer_time: Mapped[Optional[datetime.datetime]]
@@ -127,7 +127,7 @@ class TestRecord(Record):
     TestRecord is an instance of :class:`Record`
     """
 
-    __mapper_args__ = {"polymorphic_identity": "test"}
+    __mapper_args__ = {"polymorphic_identity": "TEST"}
 
     # noinspection PyTypeChecker
     def score(self, calculator: PointsCalculator) -> float:
@@ -145,7 +145,7 @@ class OpenRecord(Record):
     OpenRecord is an instance of :class:`Record`
     """
 
-    __mapper_args__ = {"polymorphic_identity": "open"}
+    __mapper_args__ = {"polymorphic_identity": "OPEN"}
 
     # noinspection PyTypeChecker
     def score(self, calculator: PointsCalculator) -> float:
