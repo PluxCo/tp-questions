@@ -55,7 +55,8 @@ class Record(SqlAlchemyBase, SerializerMixin):
 
     question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
     question: Mapped["Question"] = relationship(lazy="joined",  back_populates="_records")
-    person_id: Mapped[str]
+    person_id: Mapped[str] = mapped_column(unique=True)
+    message_id: Mapped[str]
     person_answer: Mapped[Optional[str]]
     answer_time: Mapped[Optional[datetime.datetime]]
     ask_time: Mapped[datetime.datetime]
@@ -102,11 +103,12 @@ class Record(SqlAlchemyBase, SerializerMixin):
         :return: None
         """
 
-    def transfer(self):
+    def transfer(self, message_id):
         """Method that changes :class:`RecordState` after transferring"""
 
         # noinspection PyTypeChecker
         self.state = AnswerState.TRANSFERRED
+        self.message_id = message_id
 
     def set_answer(self, answer: str) -> None:
         """

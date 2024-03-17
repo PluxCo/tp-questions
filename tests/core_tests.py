@@ -569,5 +569,116 @@ class SingleOpenRecordTestCase(unittest.TestCase):
         mock_message_factory.create_open.assert_called_once()
 
 
+class OpenRecordCRUDTestCase(TestCase):
+    def setUp(self):
+        DBWorker.init_db_file("sqlite:///:memory:", force=True)
+        self.session = DBWorker().session
+
+        question = OpenQuestion(
+            id=1,
+            text='Sample Question',
+            answer='That\'s the answer...',
+            level=2,
+            type='OPEN'
+        )
+
+        self.record = OpenRecord(
+            question_id=question.id,
+            person_id='user_1',
+            person_answer='That\'s an open question for sure',
+            ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
+            state=AnswerState.NOT_ANSWERED,
+            points=0.5  # Set a non-default value for testing
+        )
+
+        self.session.add(question)
+        self.session.add(self.record)
+        self.session.commit()
+
+    def tearDown(self):
+        # Clean up resources after each test
+        self.session.close()
+
+    def test_edit(self):
+        self.record.person_id = 'user_2'
+        self.record.person_answer = 'That\'s a test question for sure (NOPE)'
+        self.record.ask_time = datetime.datetime(1, 2, 3, 4, 5, 6)
+        self.record.state = AnswerState.ANSWERED
+        self.record.points = 1
+
+        self.assertEqual(self.record.person_id, 'user_2')
+        self.assertEqual(self.record.person_answer, 'That\'s a test question for sure (NOPE)')
+        self.assertEqual(self.record.ask_time, datetime.datetime(1, 2, 3, 4, 5, 6))
+        self.assertEqual(self.record.state, AnswerState.ANSWERED)
+        self.assertEqual(self.record.points, 1)
+
+    def test_delete(self):
+        record_id = self.record.id
+        count = self.session.scalar(select(func.count(Record.id)).where(Record.id == record_id))
+
+        self.assertEqual(1, count)
+
+        self.session.delete(self.record)
+
+        count = self.session.scalar(select(func.count(Record.id)).where(Record.id == record_id))
+        self.assertEqual(0, count)
+
+
+class TestRecordCRUDTestCase(TestCase):
+    def setUp(self):
+        DBWorker.init_db_file("sqlite:///:memory:", force=True)
+        self.session = DBWorker().session
+
+        question = TestQuestion(
+            id=1,
+            text='Sample Question',
+            options=["BAbE", "Gabe", "LAbe"],
+            answer='1',
+            level=2,
+            type='TEST'
+        )
+
+        self.record = TestRecord(
+            question_id=question.id,
+            person_id='user_1',
+            person_answer='1',
+            ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
+            state=AnswerState.NOT_ANSWERED,
+            points=0.5  # Set a non-default value for testing
+        )
+
+        self.session.add(question)
+        self.session.add(self.record)
+        self.session.commit()
+
+    def tearDown(self):
+        # Clean up resources after each test
+        self.session.close()
+
+    def test_edit(self):
+        self.record.person_id = 'user_2'
+        self.record.person_answer = '2'
+        self.record.ask_time = datetime.datetime(1, 2, 3, 4, 5, 6)
+        self.record.state = AnswerState.ANSWERED
+        self.record.points = 1
+
+        self.assertEqual(self.record.person_id, 'user_2')
+        self.assertEqual(self.record.person_answer, '2')
+        self.assertEqual(self.record.ask_time, datetime.datetime(1, 2, 3, 4, 5, 6))
+        self.assertEqual(self.record.state, AnswerState.ANSWERED)
+        self.assertEqual(self.record.points, 1)
+
+    def test_delete(self):
+        record_id = self.record.id
+        count = self.session.scalar(select(func.count(Record.id)).where(Record.id == record_id))
+
+        self.assertEqual(1, count)
+
+        self.session.delete(self.record)
+
+        count = self.session.scalar(select(func.count(Record.id)).where(Record.id == record_id))
+        self.assertEqual(0, count)
+
+
 if __name__ == '__main__':
     unittest.main()
