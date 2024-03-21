@@ -6,6 +6,7 @@ from threading import Thread
 
 from connector.telegram_connector import TelegramConnector
 from models.users import Person
+
 from schedule.generators import Session
 from tools import Settings
 

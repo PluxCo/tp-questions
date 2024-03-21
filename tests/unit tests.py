@@ -5,10 +5,10 @@ import unittest
 import uuid
 
 from faker import Faker
-
-from api.api import app as restful_api
 from models.db_session import global_init, create_session
 from models.questions import QuestionGroupAssociation, Question, QuestionType, AnswerRecord, AnswerState
+
+from api.api import app as restful_api
 from tools import Settings
 
 fake = Faker()

@@ -3,11 +3,11 @@ import datetime
 from typing import Optional
 
 import numpy as np
-from sqlalchemy import select, func, or_
-
 from models import db_session
-from models.questions import Question, AnswerRecord, AnswerState, QuestionGroupAssociation, QuestionType
+from models.questions import Question, AnswerRecord, AnswerState, QuestionGroupAssociation
 from models.users import Person
+from sqlalchemy import select, func
+
 from tools import Settings
 
 
