@@ -1,6 +1,6 @@
 import datetime
 from abc import ABC, abstractmethod
-from typing import List, Union, Sequence
+from typing import Union, Sequence
 
 import numpy as np
 from sqlalchemy import select, func
@@ -18,7 +18,7 @@ class Generator(ABC):
     """
 
     @abstractmethod
-    def next_bunch(self, person: Person, count: int = 1) -> List[Union[Question, Record]]:
+    def next_bunch(self, person: Person, count: int = 1) -> Sequence[Union[Question, Record]]:
         r"""
         Generates a list of questions or question answers.
 
@@ -61,7 +61,7 @@ class Generator(ABC):
 
 
 class SimpleGenerator(Generator):
-    def next_bunch(self, person: Person, count: int = 1) -> Sequence[Record] | list[Record]:
+    def next_bunch(self, person: Person, count: int = 1) -> Sequence[Union[Question, Record]]:
         with DBWorker() as db:
             # Get planned questions
             planned = self._get_planned(person)
@@ -85,7 +85,7 @@ class SmartGenerator(Generator):
         self._sigma = sigma
         self._correcting_value = correcting_value
 
-    def next_bunch(self, person, count: int = 1) -> Sequence[Record] | list[Record]:
+    def next_bunch(self, person, count: int = 1) -> Sequence[Union[Question, Record]]:
         with DBWorker() as db:
             # Get planned questions
             planned = self._get_planned(person)
@@ -121,12 +121,16 @@ class SmartGenerator(Generator):
                     max_target_level = max(
                         gl for pg, gl in person.groups if pg in [x.group_id for x in question.groups])
 
+                    # P stands for probability. Here we are getting the ratio between amount of points and
+                    # the time of not answering.
                     p = (datetime.datetime.now() - last_answer.ask_time).total_seconds() / points_sum
 
+                    # deciding whether the question has come at the right time or not with this crazy probability
                     p *= np.abs(np.cos(np.pi * np.log2(periods_count + self._mu))) ** (
-                            ((
-                                         periods_count + self._mu) ** 2) / self._sigma) + self._correcting_value  # planning questions
-                    p *= np.exp(-0.5 * (max_target_level - question.level) ** 2)  # normal by level
+                            ((periods_count + self._mu) ** 2) / self._sigma) + self._correcting_value
+
+                    # adding the suitability of level
+                    p *= np.exp(-0.5 * (max_target_level - question.level) ** 2)
 
                     probabilities[i] = p
                 else:

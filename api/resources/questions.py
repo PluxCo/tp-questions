@@ -1,12 +1,11 @@
 import json
-import logging
 
 from flask_restful import Resource, reqparse
-from sqlalchemy import select, update, delete, or_, desc, asc, func
-
-from api.utils import abort_if_doesnt_exist, view_parser
 from models.db_session import create_session
 from models.questions import Question, QuestionGroupAssociation, QuestionType, AnswerRecord
+from sqlalchemy import select, update, delete, or_, desc, func
+
+from api.utils import abort_if_doesnt_exist, view_parser
 
 # Request parser for updating question data
 update_data_parser = reqparse.RequestParser()

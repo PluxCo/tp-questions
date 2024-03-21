@@ -3,11 +3,11 @@ from typing import Union
 from sqlalchemy import select
 
 from core.answers import OpenRecord, TestRecord, Record
-from core.questions import OpenQuestion, TestQuestion
 from core.routes import MessageFactory
 from db_connector import DBWorker
 from generator.generators import SmartGenerator
 from generator.router import PersonRouter
+from telegram_connector import TelegramMessage
 from telegram_connector.TelegramMessage import TelegramOpenMessage, TelegramTestMessage
 
 
@@ -47,19 +47,16 @@ class TelegramMessageFactory(MessageFactory):
             return self._messages[message_id]
         else:
             record = self.get_record(message_id)
-            match record:
-                case OpenRecord():
-                    message = TelegramOpenMessage(record)
-                case TestRecord():
-                    message = TelegramTestMessage(record)
-            return message
+            proxy_message = ProxyMessageFactory()
+            record.dispatch(proxy_message)
+            return proxy_message.get_message()
 
     def send_messages(self) -> None:
         """
         Sends all messages stored in the factory.
 
         This method iterates through all stored messages and sends each one.
-        After sending, it clears the stored messages dictionary.
+        After sending, it clears the stored messages' dictionary.
         """
         for message in self._messages.values():
             message.send()
@@ -80,20 +77,7 @@ class TelegramMessageFactory(MessageFactory):
 
         :param user_id: (:class:`int`) The ID of the user to deliver the message to.
         """
-        records = self._router.prepare_next(user_id)
-        for item in records:
-            match item:
-                case OpenQuestion():
-                    record = OpenRecord(question_id=item.question_id, person_id=item.person_id)
-                    self.create_open(record)
-                case TestQuestion():
-                    record = TestRecord(question_id=item.question_id, person_id=item.person_id)
-                    self.create_test(record)
-                case TestRecord():
-                    self.create_test(item)
-                case OpenRecord():
-                    self.create_open(item)
-
+        self._router.prepare_next(user_id)
         self.send_messages()
 
     def create_open(self, record: OpenRecord) -> None:
@@ -111,3 +95,18 @@ class TelegramMessageFactory(MessageFactory):
         :param record: (:class:`TestRecord`) The TestRecord object to create the message from.
         """
         self._messages[record.message_id] = TelegramTestMessage(record)
+
+
+class ProxyMessageFactory(MessageFactory):
+    def __init__(self):
+        super().__init__()
+        self._message = None
+
+    def get_message(self) -> TelegramMessage:
+        return self._message
+
+    def create_test(self, record: TestRecord) -> None:
+        self._message = TelegramTestMessage(record)
+
+    def create_open(self, record: OpenRecord) -> None:
+        self._message = TelegramOpenMessage(record)

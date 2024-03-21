@@ -17,7 +17,7 @@ class Webhook(Resource):
     answer_parser = reqparse.RequestParser()
     answer_parser.add_argument("type", type=dict, required=True)
     answer_parser.add_argument("data", type=dict, required=True)
-    factory = TelegramMessageFactory()
+    _factory: TelegramMessageFactory = None
 
     def post(self):
         """
@@ -28,8 +28,8 @@ class Webhook(Resource):
 
         match args['type']:
             case "message":
-                self.factory.response_handler(args['data'])
+                self._factory.response_handler(args['data'])
             case "request":
-                self.factory.request_delivery(args['data']['user_id'])
+                self._factory.request_delivery(args['data']['user_id'])
 
         return {"clear_buttons": True}, 200

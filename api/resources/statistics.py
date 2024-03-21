@@ -1,12 +1,8 @@
-import json
-import logging
-
 from flask_restful import Resource, reqparse
-from sqlalchemy import select, distinct, func, case
-
 from models import db_session
 from models.questions import AnswerRecord, Question, QuestionGroupAssociation, AnswerState
 from models.users import Person
+from sqlalchemy import select, distinct, func, case
 
 question_stats_data_parser = reqparse.RequestParser()
 question_stats_data_parser.add_argument('question_id', type=str, required=False)

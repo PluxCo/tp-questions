@@ -75,12 +75,12 @@ class Question(SqlAlchemyBase, SerializerMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def init_record(self) -> Record:
+    def init_record(self, person_id) -> Record:
         """
         An abstract method that returns an instance of the associated record
         :return: Record
         """
-        return Record(question_id=self.id)
+        return Record(question_id=self.id, person_id=person_id)
 
 
 class TestQuestion(Question):

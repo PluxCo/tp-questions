@@ -1,18 +1,11 @@
-import enum
 import json
 import os
 from abc import ABC, abstractmethod
 
 import requests
 
+from calculators.SimpleCalculator import SimpleCalculator
 from core.answers import Record, OpenRecord, TestRecord
-from telegram_connector.TelegramCalculators import TelegramCalculator
-
-
-class MessageType(enum.Enum):
-    SIMPLE = 0
-    WITH_BUTTONS = 1
-    MOTIVATION = 2
 
 
 class TelegramMessage(ABC):
@@ -48,11 +41,11 @@ class TelegramOpenMessage(TelegramMessage):
     def handle_answer(self, answer: str):
         self._record.set_answer(answer)
 
-        score = self._record.score(TelegramCalculator())
+        score = self._record.score(SimpleCalculator())
         request = {"webhook": self._questions_webhook,
                    "messages": [{
                        "user_id": self._record.person_id,
-                       "type": MessageType.SIMPLE.value,
+                       "type": "SIMPLE",
                        "text": f"На мой субъективный взгляд, ответ на {score}, "
                                "однако потом оценку могут изменить."
                    }]}
@@ -78,14 +71,14 @@ class TelegramTestMessage(TelegramMessage):
 
     def handle_answer(self, answer: str):
         self._record.set_answer(answer)
-        score = self._record.score(TelegramCalculator())
+        score = self._record.score(SimpleCalculator())
 
         if score == 1:
             request = {
                 "webhook": self._questions_webhook,
                 "messages": [{
                     "user_id": self._record.person_id,
-                    "type": MessageType.SIMPLE.value,
+                    "type": "SIMPLE",
                     "text": "Ответ верный!"
                 }]}
         else:
@@ -93,7 +86,7 @@ class TelegramTestMessage(TelegramMessage):
                 "webhook": self._questions_webhook,
                 "messages": [{
                     "user_id": self._record.person_id,
-                    "type": MessageType.SIMPLE.value,
+                    "type": "SIMPLE",
                     "text": "Ответ неверный ;("
                 }]}
 

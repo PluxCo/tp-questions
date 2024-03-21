@@ -1,13 +1,12 @@
 import datetime
-import logging
 
 from flask_restful import Resource, reqparse
-from sqlalchemy import select, desc, func, update
-
-from api.utils import abort_if_doesnt_exist, view_parser
 from models import db_session
 from models.db_session import create_session
 from models.questions import AnswerRecord, AnswerState, QuestionType
+from sqlalchemy import select, desc, func, update
+
+from api.utils import abort_if_doesnt_exist, view_parser
 
 # Request parser for filtering answer resources based on person_id and question_id
 fields_parser = view_parser.copy()

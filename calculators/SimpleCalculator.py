@@ -1,7 +1,7 @@
 from core.answers import PointsCalculator, OpenRecord, TestRecord
 
 
-class TelegramCalculator(PointsCalculator):
+class SimpleCalculator(PointsCalculator):
     """
     Represents a calculator for scoring answers.
 
@@ -12,7 +12,7 @@ class TelegramCalculator(PointsCalculator):
 
     def __init__(self):
         """
-        Initializes a TelegramCalculator object.
+        Initializes a SimpleCalculator object.
         """
         super().__init__()
 
