@@ -1,11 +1,12 @@
 import json
 
 from flask_restful import Resource, reqparse
-from models.db_session import create_session
-from models.questions import Question, QuestionGroupAssociation, QuestionType, AnswerRecord
 from sqlalchemy import select, update, delete, or_, desc, func
 
 from api.utils import abort_if_doesnt_exist, view_parser
+from core.answers import Record
+from core.questions import Question, QuestionGroupAssociation, QuestionType
+from db_connector import DBWorker
 
 # Request parser for updating question data
 update_data_parser = reqparse.RequestParser()
@@ -49,10 +50,9 @@ class QuestionResource(Resource):
         Returns:
             tuple: A tuple containing the details of the Question and HTTP status code.
         """
-        with create_session() as db:
+        with DBWorker() as db:
             # Retrieve the Question from the database and convert it to a dictionary
             db_question = db.get(Question, question_id).to_dict(rules=("-groups.id", "-groups.question_id"))
-            db_question["options"] = json.loads(db_question["options"])
 
         return db_question, 200
 
@@ -80,7 +80,7 @@ class QuestionResource(Resource):
                       for g_id in filtered_args["groups"]]
             del filtered_args["groups"]
 
-        with create_session() as db:
+        with DBWorker() as db:
             db_question = db.get(Question, question_id)
 
             db.execute(update(Question).
@@ -94,7 +94,7 @@ class QuestionResource(Resource):
                 db_question.groups.extend(groups)
 
             if "options" in filtered_args or "answer" in filtered_args:
-                answers_to_update = db.scalars(select(AnswerRecord).where(AnswerRecord.question_id == db_question.id))
+                answers_to_update = db.scalars(select(Record).where(Record.question_id == db_question.id))
                 for answer in answers_to_update:
                     answer.calculate_points()
 
@@ -103,7 +103,7 @@ class QuestionResource(Resource):
         return self.get(question_id=question_id), 200
 
     def delete(self, question_id):
-        with create_session() as db:
+        with DBWorker() as db:
             question = db.get(Question, question_id)
             db.delete(question)
             db.commit()
@@ -126,13 +126,12 @@ class QuestionsListResource(Resource):
 
         search_string = args['search_string']
 
-        with create_session() as db:
+        with DBWorker() as db:
             total = db.scalar(select(func.count(Question.id)))
 
             db_req = (select(Question, func.count(Question.id).over())
                       .where(or_(Question.text.ilike(f"%{search_string}%"),
                                  Question.subject.ilike(f"%{search_string}%"),
-                                 Question.options.ilike(f"%{search_string}%"),
                                  Question.level.ilike(f"%{search_string}%"),
                                  Question.article_url.ilike(f"%{search_string}%"))))
 
@@ -145,10 +144,6 @@ class QuestionsListResource(Resource):
             for a, results_filtered in db.execute(db_req):
                 questions.append(a.to_dict(rules=("-groups.id", "-groups.question_id")))
 
-            for q in questions:
-                if q["options"]:
-                    q["options"] = json.loads(q["options"])
-
         return {"results_total": total, "results_count": results_filtered, "questions": questions}, 200
 
     def post(self, **kwargs):
@@ -158,15 +153,13 @@ class QuestionsListResource(Resource):
         Returns:
             tuple: A tuple containing the details of the created Question and HTTP status code.
         """
-        with create_session() as db:
+        with DBWorker() as db:
             args = create_data_parser.parse_args()
             db_question = Question(text=args['text'],
                                    subject=args['subject'],
-                                   options=json.dumps(args['options'], ensure_ascii=True),
                                    answer=args['answer'],
                                    level=args['level'],
-                                   article_url=args['article_url'],
-                                   type=args.get('type', QuestionType.TEST))
+                                   article_url=args['article_url'])
             db.add(db_question)
             db.commit()
 

@@ -1,6 +1,6 @@
 from flask_restful import abort, reqparse
 
-from models.db_session import create_session
+from db_connector import DBWorker
 
 view_parser = reqparse.RequestParser()
 view_parser.add_argument('order', type=str, required=False, choices=("asc", "desc"), default="asc", location="args")
@@ -23,7 +23,7 @@ def abort_if_doesnt_exist(field_name, model):
 
     def decorator(func):
         def wrapper(*args, **kwargs):
-            with create_session() as db:
+            with DBWorker() as db:
                 # Check if the specified field value exists in the database
                 if db.get(model, kwargs[field_name]) is None:
                     abort(404,

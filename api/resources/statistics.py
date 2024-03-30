@@ -1,8 +1,10 @@
 from flask_restful import Resource, reqparse
-from models import db_session
-from models.questions import AnswerRecord, Question, QuestionGroupAssociation, AnswerState
-from models.users import Person
 from sqlalchemy import select, distinct, func, case
+
+from core.answers import Record, AnswerState
+from core.questions import Question, QuestionGroupAssociation
+from db_connector import DBWorker
+from users import Person
 
 question_stats_data_parser = reqparse.RequestParser()
 question_stats_data_parser.add_argument('question_id', type=str, required=False)
@@ -12,7 +14,7 @@ question_stats_data_parser.add_argument('person_id', type=str, required=False)
 class ShortStatisticsResource(Resource):
 
     def get(self):
-        with db_session.create_session() as db:
+        with DBWorker() as db:
             persons = Person.get_all_people()
             resp = {}
 
@@ -22,15 +24,15 @@ class ShortStatisticsResource(Resource):
                                            where(QuestionGroupAssociation.group_id.in_(pg for pg, pl in person.groups)).
                                            group_by(Question.id)).all()
 
-                last_answers = (select(AnswerRecord.id)
-                                .where(AnswerRecord.person_id == person.id)
-                                .group_by(AnswerRecord.question_id)
-                                .having(AnswerRecord.answer_time == func.max(AnswerRecord.answer_time)))
+                last_answers = (select(Record.id)
+                                .where(Record.person_id == person.id)
+                                .group_by(Record.question_id)
+                                .having(Record.answer_time == func.max(Record.answer_time)))
 
-                correct_count = db.scalar(select(func.sum(AnswerRecord.points)).
-                                          where(AnswerRecord.id.in_(last_answers)))
-                answered_count = db.scalar(select(func.count(AnswerRecord.id)).
-                                           where(AnswerRecord.id.in_(last_answers)))
+                correct_count = db.scalar(select(func.sum(Record.points)).
+                                          where(Record.id.in_(last_answers)))
+                answered_count = db.scalar(select(func.count(Record.id)).
+                                           where(Record.id.in_(last_answers)))
                 questions_count = len(all_questions)
 
                 resp[person.id] = {"correct_count": correct_count,
@@ -46,26 +48,26 @@ class UserStatisticsResource(Resource):
 
         ls_stat = []
 
-        with db_session.create_session() as db:
+        with DBWorker() as db:
             person_subjects = (select(distinct(Question.subject)).join(Question.groups).
                                where(QuestionGroupAssociation.group_id.in_(pg[0] for pg in person.groups)))
 
-            last_user_answers = (select(AnswerRecord.id)
-                                 .where(AnswerRecord.person_id == person.id)
-                                 .group_by(AnswerRecord.question_id)
-                                 .having(AnswerRecord.answer_time == func.max(AnswerRecord.answer_time)))
+            last_user_answers = (select(Record.id)
+                                 .where(Record.person_id == person.id)
+                                 .group_by(Record.question_id)
+                                 .having(Record.answer_time == func.max(Record.answer_time)))
 
-            total_points, total_answered_count = db.execute(select(func.sum(AnswerRecord.points),
-                                                                   func.count(AnswerRecord.question_id))
-                                                            .where(AnswerRecord.id.in_(last_user_answers))).one()
+            total_points, total_answered_count = db.execute(select(func.sum(Record.points),
+                                                                   func.count(Record.question_id))
+                                                            .where(Record.id.in_(last_user_answers))).one()
 
             # points and answered_count by subjects and levels
             level_subject_info = db.execute(select(Question.level,
                                                    Question.subject,
-                                                   func.sum(AnswerRecord.points),
-                                                   func.count(AnswerRecord.question_id))
-                                            .join(AnswerRecord.question)
-                                            .where(AnswerRecord.id.in_(last_user_answers))
+                                                   func.sum(Record.points),
+                                                   func.count(Record.question_id))
+                                            .join(Record.question)
+                                            .where(Record.id.in_(last_user_answers))
                                             .group_by(Question.level, Question.subject)).all()
 
             questions_count = db.execute(select(Question.level, Question.subject, func.count(distinct(Question.id)))
@@ -79,15 +81,15 @@ class UserStatisticsResource(Resource):
 
             # contains total/last points and answered/transferred counts for all questions that available for user
             questions = db.execute(select(Question,
-                                          func.coalesce(func.sum(AnswerRecord.points), 0),
-                                          func.count(case((AnswerRecord.state == AnswerState.ANSWERED, 1))),
-                                          func.count(case((AnswerRecord.state == AnswerState.TRANSFERRED, 1))),
+                                          func.coalesce(func.sum(Record.points), 0),
+                                          func.count(case((Record.state == AnswerState.ANSWERED, 1))),
+                                          func.count(case((Record.state == AnswerState.TRANSFERRED, 1))),
                                           func.coalesce(
-                                              case((AnswerRecord.answer_time == func.max(AnswerRecord.answer_time),
-                                                    AnswerRecord.points)), 0)
+                                              case((Record.answer_time == func.max(Record.answer_time),
+                                                    Record.points)), 0)
                                           )
-                                   .outerjoin(AnswerRecord, Question.id == AnswerRecord.question_id)
-                                   .where((AnswerRecord.person_id == person_id) | (AnswerRecord.person_id == None),
+                                   .outerjoin(Record, Question.id == Record.question_id)
+                                   .where((Record.person_id == person_id) | (Record.person_id == None),
                                           Question.id.in_(user_question_ids))
                                    .group_by(Question.id)).all()
 

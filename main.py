@@ -16,7 +16,7 @@ default_settings = {
 
 if __name__ == '__main__':
     Settings().setup("data/settings.stg", default_settings)
-    DBWorker.init_db_file("data/database.db")
+    DBWorker.init_db_file("sqlite:///data/data.db")
 
     # Schedule(lambda x: 0).from_settings().start()
 
