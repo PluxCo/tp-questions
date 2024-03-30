@@ -62,16 +62,16 @@ class Generator(ABC):
 
 class SimpleGenerator(Generator):
     def next_bunch(self, person: Person, count: int = 1) -> Sequence[Union[Question, Record]]:
-        with DBWorker() as db:
-            # Get planned questions
-            planned = self._get_planned(person)
-            if len(planned) >= count:
-                return planned[:count]
+        # Get planned questions
+        planned = self._get_planned(person)
+        if len(planned) >= count:
+            return planned[:count]
 
-            # Get available questions for the person
-            person_questions = self._get_person_questions(person)
+        # Get available questions for the person
+        person_questions = self._get_person_questions(person)
 
         # Randomly select questions from available ones
+
         questions = np.random.choice(person_questions,
                                      size=min(count - len(planned), len(person_questions)),
                                      replace=False)

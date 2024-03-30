@@ -2,7 +2,7 @@ import logging
 
 from flask_restful import Resource, reqparse
 
-from telegram_connector.TelegramMessageFactory import TelegramMessageFactory
+from telegram_connector.telegram_message_factory import TelegramMessageFactory
 
 
 class Webhook(Resource):

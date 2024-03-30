@@ -1,4 +1,5 @@
-from core.answers import PointsCalculator, OpenRecord, TestRecord
+from core.answers import OpenRecord, TestRecord
+from core.routes import PointsCalculator
 
 
 class SimpleCalculator(PointsCalculator):

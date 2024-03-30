@@ -14,7 +14,7 @@ class TelegramMessage(ABC):
         self._questions_webhook = os.getenv("QUESTIONS_URL") + "/webhook/"
         self._destination = os.getenv('TELEGRAM_API') + "/message"
 
-        self.message_id = None
+        self.message_id = record.message_id
 
     @abstractmethod
     def send(self):

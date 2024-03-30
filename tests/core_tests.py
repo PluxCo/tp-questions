@@ -111,7 +111,7 @@ class SingleTestQuestionTestCase(unittest.TestCase):
         self.assertNotIsInstance(question, OpenQuestion)
 
     def test_answer_init(self):
-        record = self.question.init_record()
+        record = self.question.init_record('user 1')
 
         self.assertIsInstance(record, Record)
         self.assertIsInstance(record, TestRecord)
@@ -169,7 +169,7 @@ class SingleOpenQuestionTestCase(unittest.TestCase):
         self.assertNotIsInstance(question, TestQuestion)
 
     def test_answer_init(self):
-        record = self.question.init_record()
+        record = self.question.init_record('user 1')
 
         self.assertIsInstance(record, Record)
         self.assertIsInstance(record, OpenRecord)
@@ -191,13 +191,13 @@ class TestQuestionCRUDTestCase(unittest.TestCase):
         self.session.add(self.question)
         self.session.commit()
 
-        record = self.question.init_record()
+        record = self.question.init_record('user 1')
         record.ask_time = datetime.datetime.now()
         record.state = AnswerState.NOT_ANSWERED
         record.person_id = "1"
         self.session.add(record)
 
-        record = self.question.init_record()
+        record = self.question.init_record('user 1')
         record.ask_time = datetime.datetime.now()
         record.state = AnswerState.NOT_ANSWERED
         record.person_id = "1"
@@ -257,13 +257,13 @@ class OpenQuestionCRUDTestCase(TestCase):
         self.session.add(self.question)
         self.session.commit()
 
-        record = self.question.init_record()
+        record = self.question.init_record('user 1')
         record.ask_time = datetime.datetime.now()
         record.state = AnswerState.NOT_ANSWERED
         record.person_id = "1"
         self.session.add(record)
 
-        record = self.question.init_record()
+        record = self.question.init_record('user 1')
         record.ask_time = datetime.datetime.now()
         record.state = AnswerState.NOT_ANSWERED
         record.person_id = "1"
@@ -445,7 +445,7 @@ class SingleTestRecordTestCase(unittest.TestCase):
 
     def test_transferring(self):
         retrieved_record = self.session.get(TestRecord, self.record.id)
-        retrieved_record.transfer()
+        retrieved_record.transfer('message 1')
 
         self.assertEqual(self.record.state, AnswerState.TRANSFERRED)
 
@@ -546,7 +546,7 @@ class SingleOpenRecordTestCase(unittest.TestCase):
 
     def test_transferring(self):
         retrieved_record = self.session.get(OpenRecord, self.record.id)
-        retrieved_record.transfer()
+        retrieved_record.transfer('message id')
 
         self.assertEqual(self.record.state, AnswerState.TRANSFERRED)
 

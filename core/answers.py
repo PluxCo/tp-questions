@@ -56,11 +56,11 @@ class Record(SqlAlchemyBase, SerializerMixin):
     question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
     question: Mapped["Question"] = relationship(lazy="joined", back_populates="_records")
     person_id: Mapped[str]
-    message_id: Mapped[str]
+    message_id: Mapped[Optional[str]]
     person_answer: Mapped[Optional[str]]
     answer_time: Mapped[Optional[datetime.datetime]]
     ask_time: Mapped[datetime.datetime]
-    state: Mapped[AnswerState]
+    state: Mapped[AnswerState] = mapped_column(default=AnswerState.NOT_ANSWERED)
     points: Mapped[float] = mapped_column(default=0)
 
     __mapper_args__ = {"polymorphic_identity": "record", "polymorphic_on": "type"}
@@ -108,6 +108,7 @@ class Record(SqlAlchemyBase, SerializerMixin):
 
         # noinspection PyTypeChecker
         self.state = AnswerState.TRANSFERRED
+        self.ask_time = datetime.datetime.now()
         self.message_id = message_id
 
     def set_answer(self, answer: str) -> None:

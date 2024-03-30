@@ -31,7 +31,7 @@ class QuestionGroupAssociation(SqlAlchemyBase, SerializerMixin):
 
     Attributes:
         id (int): The primary key of the association.
-        question_id (int): Foreign key referencing the questions table.
+        question_id (int): Foreign key referencing the question table.
         group_id (str): The ID of the group associated with the question.
     """
     __tablename__ = "question_to_group"
@@ -75,12 +75,12 @@ class Question(SqlAlchemyBase, SerializerMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def init_record(self, person_id) -> Record:
+    def init_record(self, person_id: str) -> Record:
         """
         An abstract method that returns an instance of the associated record
         :return: Record
         """
-        return Record(question_id=self.id, person_id=person_id)
+        return Record(question_id=self.id, person_id=person_id, question=self)
 
 
 class TestQuestion(Question):
@@ -94,13 +94,13 @@ class TestQuestion(Question):
 
     __mapper_args__ = {"polymorphic_identity": "TEST"}
 
-    def init_record(self) -> Record:
+    def init_record(self, person_id: str) -> Record:
         """
         Overrides :meth:`Question.init_record` to provide :class:`TestRecord`
 
         :return: TestRecord
         """
-        return TestRecord(question_id=self.id)
+        return TestRecord(question_id=self.id, person_id=person_id, question=self)
 
 
 class OpenQuestion(Question):
@@ -110,10 +110,10 @@ class OpenQuestion(Question):
 
     __mapper_args__ = {"polymorphic_identity": "OPEN"}
 
-    def init_record(self) -> Record:
+    def init_record(self, person_id: str) -> Record:
         """
         Overrides :meth:`Question.init_record` to provide :class:`OpenRecord`
 
         :return: OpenRecord
         """
-        return OpenRecord(question_id=self.id)
+        return OpenRecord(question_id=self.id, person_id=person_id, question=self)
