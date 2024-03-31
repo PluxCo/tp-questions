@@ -122,6 +122,7 @@ class Record(SqlAlchemyBase, SerializerMixin):
         """
 
         # noinspection PyTypeChecker
+        self.answer_time = datetime.datetime.now()
         self.person_answer = answer
 
 

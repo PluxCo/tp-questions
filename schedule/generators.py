@@ -245,7 +245,7 @@ class Session:
             question_answer (AnswerRecord): The question answer to mark as transferred.
         """
         with db_session.create_session() as db:
-            question_answer = db.get(AnswerRecord, question_answer.id)
+            question_answer = db.get(AnswerRecord)
             question_answer.state = AnswerState.TRANSFERRED
 
             if question_answer.ask_time is None:
@@ -263,7 +263,7 @@ class Session:
             user_answer: The user's answer to the question.
         """
         with db_session.create_session() as db:
-            question_answer = db.get(AnswerRecord, question_answer.id)
+            question_answer = db.get(AnswerRecord)
 
             if user_answer is not None:
                 question_answer.person_answer = user_answer

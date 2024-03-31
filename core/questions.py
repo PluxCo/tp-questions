@@ -1,7 +1,6 @@
 """
 File that describes the questions and specific types of questions
 """
-import enum
 from typing import List, Optional
 
 from sqlalchemy import ForeignKey
@@ -11,18 +10,6 @@ from sqlalchemy_serializer import SerializerMixin
 from core.answers import Record, TestRecord, OpenRecord
 from db_connector import SqlAlchemyBase
 from db_connector.types import TextJson
-
-
-class QuestionType(enum.Enum):
-    """
-    Enumeration which represents the type of AnswerRecord.
-
-    Attributes:
-        TEST (int): The question suggests answer in a test form.
-        OPEN (int): The question suggests answer in a text form.
-    """
-    TEST = 0
-    OPEN = 1
 
 
 class QuestionGroupAssociation(SqlAlchemyBase, SerializerMixin):

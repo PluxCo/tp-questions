@@ -17,14 +17,14 @@ class PersonRouter():
 
     def prepare_next(self, person_id: str, db_worker: DBWorker() = None):
         items = self.generator.next_bunch(Person.get_person(person_id))
-
-        with DBWorker() if db_worker else db_worker as db:
+        with DBWorker() if db_worker is None else db_worker as db:
             for item in items:
                 if isinstance(item, Question):
                     record = item.init_record(person_id)
                     record.ask_time = datetime.datetime.now()
-                    db.add(record)
                     record.dispatch(self._factory)
+                    db.add(record)
+
                 elif isinstance(item, Record):
                     item.dispatch(self._factory)
 
