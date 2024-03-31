@@ -46,12 +46,7 @@ class UserStatisticsResource(Resource):
     def get(self, person_id):
         person = Person.get_person(person_id)
 
-        ls_stat = []
-
         with DBWorker() as db:
-            person_subjects = (select(distinct(Question.subject)).join(Question.groups).
-                               where(QuestionGroupAssociation.group_id.in_(pg[0] for pg in person.groups)))
-
             last_user_answers = (select(Record.id)
                                  .where(Record.person_id == person.id)
                                  .group_by(Record.question_id)
@@ -89,7 +84,7 @@ class UserStatisticsResource(Resource):
                                                     Record.points)), 0)
                                           )
                                    .outerjoin(Record, Question.id == Record.question_id)
-                                   .where((Record.person_id == person_id) | (Record.person_id == None),
+                                   .where((Record.person_id == person_id) | (Record.person_id is None),
                                           Question.id.in_(user_question_ids))
                                    .group_by(Question.id)).all()
 
