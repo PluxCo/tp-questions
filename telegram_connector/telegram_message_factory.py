@@ -3,6 +3,7 @@ File with Telegram message factory implementation.
 """
 from __future__ import annotations
 
+import logging
 from typing import Union, TYPE_CHECKING
 
 from sqlalchemy import select
@@ -15,6 +16,7 @@ from telegram_connector.telegram_message import TelegramOpenMessage, TelegramTes
 if TYPE_CHECKING:
     from generator.router import PersonRouter
 
+logger = logging.getLogger(__name__)
 
 # noinspection GrazieInspection,Style,Annotator
 class TelegramMessageFactory(MessageFactory):
@@ -63,9 +65,16 @@ class TelegramMessageFactory(MessageFactory):
         This method iterates through all stored messages and sends each one.
         After sending, it clears the stored messages' dictionary.
         """
-        for message in self._messages:
-            message.send()
-        self._messages = []
+        logger.debug("Sending messages...")
+
+        try:
+            for message in self._messages:
+                message.send()
+            self._messages = []
+        except Exception as e:
+            logger.exception(e)
+        else:
+            logger.debug("Messages sent")
 
     def response_handler(self, data: dict) -> None:
         """
@@ -73,8 +82,16 @@ class TelegramMessageFactory(MessageFactory):
 
         :param data: (:class:`dict`) The response data received.
         """
-        message = self.get_message(data['answer']["reply_to"])
-        message.handle_answer(data["answer"]['data'])
+        logger.debug("Handling incoming answer...")
+        try:
+            message = self.get_message(data['answer']["reply_to"])
+            logger.debug(f"Received message: {data}")
+
+            message.handle_answer(data["answer"]['data'])
+        except Exception as e:
+            logger.exception(e)
+        else:
+            logger.debug("Answer handled")
 
     def request_delivery(self, user_id: str) -> None:
         """
@@ -82,8 +99,14 @@ class TelegramMessageFactory(MessageFactory):
 
         :param user_id: (:class:`int`) The ID of the user to deliver the message to.
         """
-        self._router.prepare_next(user_id)
-        self.send_messages()
+        logger.debug("Requesting delivery...")
+        try:
+            self._router.prepare_next(user_id)
+            self.send_messages()
+        except Exception as e:
+            logger.exception(e)
+        else:
+            logger.debug("Delivery requested")
 
     def create_open(self, record: OpenRecord) -> None:
         """

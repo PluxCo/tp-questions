@@ -39,5 +39,5 @@ class Webhook(Resource):
 
             return {"clear_buttons": True}, 200
         except Exception as e:
-            logging.error(e)
+            logging.exception(e)
             return {"message": str(e)}, 500

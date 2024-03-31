@@ -56,7 +56,7 @@ class Record(SqlAlchemyBase, SerializerMixin):
     type: Mapped[str]
 
     question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
-    question: Mapped["Question"] = relationship(lazy="joined", back_populates="_records")
+    question: Mapped["Question"] = relationship(lazy="joined", back_populates="records")
     person_id: Mapped[str]
     message_id: Mapped[Optional[str]]
     person_answer: Mapped[Optional[str]]

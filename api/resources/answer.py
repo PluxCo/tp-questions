@@ -2,6 +2,7 @@
 Answer Resource for the API
 """
 import datetime
+import logging
 
 from flask_restful import Resource, reqparse
 from sqlalchemy import select, desc, func, update
@@ -10,6 +11,8 @@ from api.utils import abort_if_doesnt_exist, view_parser
 from core.answers import Record, AnswerState, TestRecord, OpenRecord
 from core.questions import Question
 from db_connector import DBWorker
+
+logger = logging.getLogger(__name__)
 
 # Request parser for filtering answer resources based-on-person_id and question_id
 fields_parser = view_parser.copy()
@@ -48,6 +51,7 @@ class RecordResource(Resource):
                 db_answer = db.get(Record, record_id).to_dict(rules=("-question",))
             return db_answer, 200
         except Exception as e:
+            logger.exception(e)
             return {"message": f"An unexpected error occurred: {str(e)}"}, 500
 
     @abort_if_doesnt_exist("record_id", Record)
@@ -62,8 +66,11 @@ class RecordResource(Resource):
                 db.delete(record)
                 db.commit()
 
+            logger.debug(f"Deleted Record {record_id}")
+
             return {"message": "Record deleted successfully"}, 200
         except Exception as e:
+            logger.exception(e)
             return {"message": f"An unexpected error occurred: {str(e)}"}, 500
 
     @abort_if_doesnt_exist("record_id", Record)
@@ -82,9 +89,11 @@ class RecordResource(Resource):
 
                 db_answer = db.get(Record, record_id)
 
+                logger.debug(f"Updated Record {record_id}")
                 # noinspection PyArgumentList
                 return db_answer.to_dict(rules=("-question",)), 200
         except Exception as e:
+            logger.exception(e)
             return {"message": f"An unexpected error occurred: {str(e)}"}, 500
 
 
@@ -125,8 +134,10 @@ class RecordCreationResource(Resource):
                 new_answer = self._create_question_instance(args)
                 db.add(new_answer)
                 db.commit()
+                logger.debug(f"Record {new_answer.id} added successfully")
             return {"message": "Record was planned successfully"}, 200
         except Exception as e:
+            logger.exception(e)
             return {"message": f"An unexpected error occurred: {str(e)}"}, 500
 
 
@@ -142,6 +153,8 @@ class RecordSearchResource(Resource):
         try:
             # Parse the filtering parameters from the request
             args = fields_parser.parse_args()
+
+            logger.debug(f"Record Search parameters provided successfully {args}")
 
             answer_filters = args.get("record")
             if "state" in answer_filters:
@@ -168,4 +181,5 @@ class RecordSearchResource(Resource):
 
             return {"results_total": results_total, "results_count": len(records), "records": records}, 200
         except Exception as e:
+            logger.exception(e)
             return {"message": f"An unexpected error occurred: {str(e)}"}, 500

@@ -17,6 +17,7 @@ class TelegramMessage(ABC):
     """
     Abstract class that represents a Telegram message.
     """
+
     def __init__(self, record: Record):
         self._record = record
         self._questions_webhook = os.getenv("QUESTIONS_URL") + "/webhook/"
