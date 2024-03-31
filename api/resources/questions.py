@@ -1,3 +1,6 @@
+"""
+Questions Resource for the API
+"""
 import json
 from typing import List
 
@@ -36,6 +39,7 @@ sorted_question_data_parser = view_parser.copy()
 sorted_question_data_parser.add_argument('search_string', type=str, required=False, location="args", default="")
 
 
+# noinspection PyArgumentList
 class QuestionResource(Resource):
     """
     Resource for handling individual Question instances.
@@ -43,12 +47,17 @@ class QuestionResource(Resource):
 
     @abort_if_doesnt_exist("question_id", Question)
     def get(self, question_id):
+        """
+
+        :param question_id:
+        :return:
+        """
         try:
             with DBWorker() as db:
                 db_question = db.get(Question, question_id)
                 # Convert the Question to a dictionary
                 question_details = db_question.to_dict(
-                    rules=("-groups.id", "-groups.question_id", "-_records"))
+                    rules=("-groups.id", "-groups.question_id", "-records"))
 
             return question_details, 200
         except Exception as e:
@@ -56,12 +65,17 @@ class QuestionResource(Resource):
 
     @abort_if_doesnt_exist("question_id", Question)
     def patch(self, question_id):
+        """
+
+        :param question_id:
+        :return:
+        """
         try:
             args = update_data_parser.parse_args()
             filtered_args = {k: v for k, v in args.items() if v is not None}
 
             if "options" in filtered_args:
-                filtered_args["options"] = json.dumps(filtered_args["options"], ensure_ascii=True)
+                filtered_args["options"] = json.dumps(filtered_args["options"], ensure_ascii=False)
 
             groups = []
             if "groups" in filtered_args:
@@ -83,7 +97,7 @@ class QuestionResource(Resource):
                     db_question.groups.extend(groups)
 
                 if "options" in filtered_args or "answer" in filtered_args:
-                    answers_to_update: List[Record] = db_question._records
+                    answers_to_update: List[Record] = db_question.records
                     calculator = SimpleCalculator()
                     for answer in answers_to_update:
                         answer.score(calculator)
@@ -95,6 +109,11 @@ class QuestionResource(Resource):
 
     @abort_if_doesnt_exist("question_id", Question)
     def delete(self, question_id):
+        """
+
+        :param question_id:
+        :return:
+        """
         try:
             with DBWorker() as db:
                 question = db.get(Question, question_id)
@@ -152,6 +171,7 @@ class QuestionCreationResource(Resource):
                 db.commit()
 
                 for group in groups:
+                    # noinspection PyArgumentList
                     db_question.groups.append(QuestionGroupAssociation(question_id=db_question.id,
                                                                        group_id=group))
                 db.commit()
@@ -162,7 +182,8 @@ class QuestionCreationResource(Resource):
 
 
 class QuestionSearchResource(Resource):
-    def post(self, **kwargs):
+    @staticmethod
+    def post(**kwargs):
         """
         Get a list of Question instances.
 
@@ -188,7 +209,7 @@ class QuestionSearchResource(Resource):
                 questions = []
                 results_filtered = 0
                 for a, results_filtered in db.execute(query):
-                    questions.append(a.to_dict(rules=("-groups.id", "-groups.question_id", "-_records")))
+                    questions.append(a.to_dict(rules=("-groups.id", "-groups.question_id", "-records")))
 
             return {"results_total": total, "results_count": results_filtered, "questions": questions}, 200
         except Exception as e:

@@ -1,3 +1,7 @@
+"""
+Telegram message
+This module provides a wrapper around a Telegram message
+"""
 import json
 import os
 from abc import ABC, abstractmethod
@@ -10,6 +14,9 @@ from db_connector import DBWorker
 
 
 class TelegramMessage(ABC):
+    """
+    Abstract class that represents a Telegram message.
+    """
     def __init__(self, record: Record):
         self._record = record
         self._questions_webhook = os.getenv("QUESTIONS_URL") + "/webhook/"

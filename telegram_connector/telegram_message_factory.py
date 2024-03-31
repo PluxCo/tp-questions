@@ -1,3 +1,6 @@
+"""
+File with Telegram message factory implementation.
+"""
 from __future__ import annotations
 
 from typing import Union, TYPE_CHECKING
@@ -13,6 +16,7 @@ if TYPE_CHECKING:
     from generator.router import PersonRouter
 
 
+# noinspection GrazieInspection,Style,Annotator
 class TelegramMessageFactory(MessageFactory):
     """
     Represents a factory for creating Telegram messages.
@@ -28,7 +32,8 @@ class TelegramMessageFactory(MessageFactory):
         self._messages = []
         self._router = router
 
-    def get_record(self, message_id: int) -> Union[OpenRecord, TestRecord]:
+    @staticmethod
+    def get_record(message_id: int) -> Union[OpenRecord, TestRecord]:
         r"""
         Retrieves a record from the database.
 
@@ -43,7 +48,8 @@ class TelegramMessageFactory(MessageFactory):
         Retrieves a message object based on the message ID.
 
         :param message_id: (:class:`int`) The ID of the message to retrieve.
-        :return: (:class:`Union`\[:class:`TelegramOpenMessage`, :class:`TelegramTestMessage`]) The retrieved message object.
+        :return: (:class:`Union`\[:class:`TelegramOpenMessage`, :class:`TelegramTestMessage`]) The retrieved
+        message object.
         """
         record = self.get_record(message_id)
         proxy_message = ProxyMessageFactory()
@@ -102,6 +108,10 @@ class ProxyMessageFactory(MessageFactory):
         self._message = None
 
     def get_message(self) -> TelegramMessage:
+        """
+        Gets the TelegramMessage object for this factory
+        :return: (:class: `TelegramMessage`) The TelegramMessage object representing the message.
+        """
         return self._message
 
     def create_test(self, record: TestRecord) -> None:

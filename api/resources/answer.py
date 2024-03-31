@@ -1,3 +1,6 @@
+"""
+Answer Resource for the API
+"""
 import datetime
 
 from flask_restful import Resource, reqparse
@@ -8,7 +11,7 @@ from core.answers import Record, AnswerState, TestRecord, OpenRecord
 from core.questions import Question
 from db_connector import DBWorker
 
-# Request parser for filtering answer resources based on person_id and question_id
+# Request parser for filtering answer resources based-on-person_id and question_id
 fields_parser = view_parser.copy()
 fields_parser.add_argument('record', type=dict, required=False, default={})
 
@@ -41,13 +44,18 @@ class RecordResource(Resource):
         try:
             with DBWorker() as db:
                 # Retrieve the Record from the database and convert it to a dictionary
+                # noinspection PyArgumentList
                 db_answer = db.get(Record, record_id).to_dict(rules=("-question",))
             return db_answer, 200
         except Exception as e:
             return {"message": f"An unexpected error occurred: {str(e)}"}, 500
 
     @abort_if_doesnt_exist("record_id", Record)
-    def delete(self, record_id):
+    def delete(self, record_id: int) -> tuple[dict, int]:
+        """
+        Delete a specific Record from the database.
+        :param record_id: Record ID to be deleted
+        """
         try:
             with DBWorker() as db:
                 record = db.get(Record, record_id)
@@ -60,6 +68,11 @@ class RecordResource(Resource):
 
     @abort_if_doesnt_exist("record_id", Record)
     def patch(self, record_id):
+        """
+
+        :param record_id:
+        :return:
+        """
         try:
             args = {k: v for k, v in update_answer_parser.parse_args().items() if v is not None}
 
@@ -69,6 +82,7 @@ class RecordResource(Resource):
 
                 db_answer = db.get(Record, record_id)
 
+                # noinspection PyArgumentList
                 return db_answer.to_dict(rules=("-question",)), 200
         except Exception as e:
             return {"message": f"An unexpected error occurred: {str(e)}"}, 500
@@ -101,6 +115,10 @@ class RecordCreationResource(Resource):
             raise ValueError("Invalid question type provided")
 
     def post(self):
+        """
+
+        :return:
+        """
         try:
             with DBWorker() as db:
                 args = planned_answer_parser.parse_args()
@@ -113,7 +131,8 @@ class RecordCreationResource(Resource):
 
 
 class RecordSearchResource(Resource):
-    def post(self):
+    @staticmethod
+    def post():
         """
         Get a list of Record instances based on optional filtering parameters.
 

@@ -1,3 +1,6 @@
+"""
+Starting point for the service questions
+"""
 import logging
 
 from api.api import app as flask_app

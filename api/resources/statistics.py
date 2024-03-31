@@ -1,3 +1,6 @@
+"""
+File that contains the statistics resource.
+"""
 from flask_restful import Resource, reqparse
 from sqlalchemy import select, distinct, func, case
 
@@ -13,7 +16,12 @@ question_stats_data_parser.add_argument('person_id', type=str, required=False)
 
 class ShortStatisticsResource(Resource):
 
-    def get(self):
+    @staticmethod
+    def get():
+        """
+
+        :return:
+        """
         with DBWorker() as db:
             persons = Person.get_all_people()
             resp = {}
@@ -42,8 +50,15 @@ class ShortStatisticsResource(Resource):
         return resp, 200
 
 
+# noinspection Style,Annotator
 class UserStatisticsResource(Resource):
-    def get(self, person_id):
+    @staticmethod
+    def get(person_id):
+        """
+
+        :param person_id:
+        :return:
+        """
         person = Person.get_person(person_id)
 
         with DBWorker() as db:

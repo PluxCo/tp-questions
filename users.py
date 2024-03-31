@@ -1,8 +1,12 @@
+"""
+File that contains the Person class to work with users from Fusion Auth.
+"""
 import os
 
 import requests
 
 
+# noinspection Style,Annotator
 class Person:
     """
     Class representing a person/user with associated groups.
@@ -49,6 +53,11 @@ class Person:
 
     @staticmethod
     def get_person(person_id):
+        """
+
+        :param person_id:
+        :return:
+        """
         resp = requests.get(f"{os.getenv('FUSIONAUTH_DOMAIN')}/api/user/{person_id}",
                             headers={"Authorization": os.getenv("FUSIONAUTH_TOKEN")})
 
