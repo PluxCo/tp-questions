@@ -90,7 +90,7 @@ class TestQuestion(unittest.TestCase):
         self.session.add(question)
         self.session.commit()
 
-        question_from_db = self.session.get(Question, question.id)
+        question_from_db = self.session.get(Question)
 
         self.assertEqual(question.text, question_from_db.text)
         self.assertEqual(question.subject, question_from_db.subject)
@@ -154,7 +154,7 @@ class TestAnswerRecord(unittest.TestCase):
 
         self.session.add(answer_record)
         self.session.commit()
-        answer_record = self.session.get(AnswerRecord, answer_record.id)
+        answer_record = self.session.get(AnswerRecord)
 
         self.assertEqual(answer_record.question_id, question.id)
         self.assertEqual(answer_record.person_id, 'user_1')
@@ -186,7 +186,7 @@ class TestAnswerRecord(unittest.TestCase):
 
         self.session.add(answer_record)
         self.session.commit()
-        answer_record = self.session.get(AnswerRecord, answer_record.id)
+        answer_record = self.session.get(AnswerRecord)
 
         retrieved_question = self.session.query(Question).filter_by(id=question.id).first()
         self.assertEqual(answer_record.question_id, retrieved_question.id)
@@ -262,7 +262,7 @@ class TestAnswerResource(unittest.TestCase):
             self.assertEqual(404, response.status_code)
 
 
-@unittest.skip("AnswerListResource was rewrote")
+@unittest.skip("RecordCreationResource was rewrote")
 class TestAnswerListResource(unittest.TestCase):
     def setUp(self):
         # Use an in-memory database for testing
@@ -429,7 +429,7 @@ class TestQuestionResource(unittest.TestCase):
             # Check if the question is deleted
             self.session.close()
             self.session = create_session()
-            deleted_question = self.session.get(Question, question.id)
+            deleted_question = self.session.get(Question)
             self.assertIsNone(deleted_question)
 
 

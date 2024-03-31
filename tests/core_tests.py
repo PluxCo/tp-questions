@@ -629,7 +629,7 @@ class TestRecordCRUDTestCase(TestCase):
         DBWorker.init_db_file("sqlite:///:memory:", force=True)
         self.session = DBWorker().session
 
-        question = TestQuestion(
+        self.question = TestQuestion(
             id=1,
             text='Sample Question',
             options=["BAbE", "Gabe", "LAbe"],
@@ -639,7 +639,7 @@ class TestRecordCRUDTestCase(TestCase):
         )
 
         self.record = TestRecord(
-            question_id=question.id,
+            question_id=self.question.id,
             person_id='user_1',
             person_answer='1',
             ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
@@ -647,7 +647,7 @@ class TestRecordCRUDTestCase(TestCase):
             points=0.5  # Set a non-default value for testing
         )
 
-        self.session.add(question)
+        self.session.add(self.question)
         self.session.add(self.record)
         self.session.commit()
 
@@ -676,6 +676,17 @@ class TestRecordCRUDTestCase(TestCase):
 
         self.session.delete(self.record)
 
+        count = self.session.scalar(select(func.count(Record.id)).where(Record.id == record_id))
+        self.assertEqual(0, count)
+
+        self.session.rollback()
+
+    def test_delete_by_question_deletion(self):
+        record_id = self.record.id
+        count = self.session.scalar(select(func.count(Record.id)).where(Record.id == record_id))
+        self.assertEqual(1, count)
+
+        self.session.delete(self.question)
         count = self.session.scalar(select(func.count(Record.id)).where(Record.id == record_id))
         self.assertEqual(0, count)
 
