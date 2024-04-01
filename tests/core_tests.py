@@ -1,4 +1,7 @@
 import datetime
+import os
+import random
+import time
 import unittest
 from unittest import TestCase
 from unittest.mock import Mock
@@ -404,7 +407,6 @@ class RecordCreationTestCase(unittest.TestCase):
                           points=0.5)  # Set a non-default value for testing purposes)
 
 
-
 class SingleTestRecordTestCase(unittest.TestCase):
     record = None
     session = None
@@ -787,5 +789,71 @@ class TestRecordCRUDTestCase(TestCase):
         self.assertEqual(0, count)
 
 
-if __name__ == '__main__':
-    unittest.main()
+class PerformanceTestCase(TestCase):
+    def tearDown(self):
+        pass
+
+    def setUp(self):
+        start_tick = time.perf_counter_ns()
+        end_tick = time.perf_counter_ns()
+        self.tick = end_tick - start_tick
+
+    def test_session_opening(self):
+        start = time.perf_counter_ns()
+        DBWorker.init_db_file("sqlite:///test_opening.db", force=True)
+        self.session = DBWorker().session
+        end = time.perf_counter_ns()
+
+        elapsed_time = (end - start) / self.tick
+        # needs logger
+        # print("Elapsed Time:", elapsed_time)
+        self.session.close()
+        DBWorker._engine.dispose()
+        os.remove("test_opening.db")
+        self.assertLess(elapsed_time, 300000)
+
+    def test_question_creation(self):
+        DBWorker.init_db_file("sqlite:///test_opening.db", force=True)
+        self.session = DBWorker().session
+        list_of_questions = [OpenQuestion(text=f"Question number {i}",
+                                          subject='Sample Subject',
+                                          answer='That is an answer',
+                                          level=random.randint(0, i),
+                                          article_url='https://example.com') for i in range(1000)]
+        self.session.add_all(list_of_questions)
+        start = time.perf_counter_ns()
+        self.session.commit()
+        end = time.perf_counter_ns()
+
+        elapsed_time = (end - start) / self.tick
+        # needs logger
+        # print("Elapsed Time:", elapsed_time)
+        self.session.close()
+        DBWorker._engine.dispose()
+        os.remove("test_opening.db")
+        self.assertLess(elapsed_time, 400000)
+
+    def test_delete_performance(self):
+        DBWorker.init_db_file("sqlite:///test_opening.db", force=True)
+        self.session = DBWorker().session
+        list_of_questions = [OpenQuestion(text=f"Question number {i}",
+                                          subject='Sample Subject',
+                                          answer='That is an answer',
+                                          level=random.randint(0, i),
+                                          article_url='https://example.com') for i in range(1000)]
+        self.session.add_all(list_of_questions)
+        self.session.commit()
+        for i in range(1, len(list_of_questions)):
+            self.session.delete(list_of_questions[i])
+        start = time.perf_counter_ns()
+        self.session.commit()
+        end = time.perf_counter_ns()
+
+        elapsed_time = (end - start) / self.tick
+        self.session.close()
+        DBWorker._engine.dispose()
+        os.remove("test_opening.db")
+        self.assertLess(elapsed_time, 50000)
+
+    if __name__ == '__main__':
+        unittest.main()
