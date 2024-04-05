@@ -201,6 +201,74 @@ class TestTelegramSendingMessage(unittest.TestCase):
         self.assertNotEqual(None, updated_open_record)
         self.assertEqual(updated_open_record.state, AnswerState.TRANSFERRED)
 
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    @patch('requests.post')
+    def test_catching_response_open_message_with_weird_status_code(self, mock_post):
+        message = TelegramOpenMessage(self.open_record)
+        mock_post.return_value.status_code = 418  # I’m a teapot
+        resp = Response()
+        resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
+
+        mock_post.return_value = resp
+        self.assertRaises(Exception, message.send)
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    @patch('requests.post')
+    def test_catching_response_test_message_with_weird_status_code(self, mock_post):
+        message = TelegramTestMessage(self.test_record)
+        mock_post.return_value.status_code = 418  # I’m a teapot
+        resp = Response()
+        resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
+
+        mock_post.return_value = resp
+
+        self.assertRaises(Exception, message.send)
+        # А проверки на status code и нет. А вдруг придут испорченные данные(corrupted/корумпированные)?
+
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    @patch('requests.post')
+    def test_catching_response_open_message_with_messed_up_response_message_id(self, mock_post):
+        message = TelegramOpenMessage(self.open_record)
+        mock_post.return_value.status_code = 418  # I’m a teapot
+        resp = Response()
+        resp._content = b'{"sent_messages": [{"message_id": "aaa"}]}'
+
+        mock_post.return_value = resp
+        self.assertRaises(Exception, message.send) # Никаких проверок, что message id int
+
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    @patch('requests.post')
+    def test_catching_response_test_message_with_messed_up_response_message_id(self, mock_post):
+        message = TelegramTestMessage(self.test_record)
+        mock_post.return_value.status_code = 418  # I’m a teapot
+        resp = Response()
+        resp._content = b'{"sent_messages": [{"message_id": "aaa"}]}'
+
+        mock_post.return_value = resp
+
+        self.assertRaises(Exception, message.send)  # Никаких проверок, что message id int
+
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    @patch('requests.post')
+    def test_catching_response_open_message_with_messed_up_response(self, mock_post):
+        message = TelegramOpenMessage(self.open_record)
+        mock_post.return_value.status_code = 200
+        resp = Response()
+        resp._content = b'{"sent_messages": []}'
+
+        mock_post.return_value = resp
+        self.assertRaises(Exception, message.send)
+
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    @patch('requests.post')
+    def test_catching_response_test_message_with_messed_up_response(self, mock_post):
+        message = TelegramTestMessage(self.test_record)
+        mock_post.return_value.status_code = 200
+        resp = Response()
+        resp._content = b'{"sent_messages": []}'
+
+        mock_post.return_value = resp
+
+        self.assertRaises(Exception, message.send)
 
 class TestTelegramHandlingAnswers(unittest.TestCase):
     def setUp(self):
@@ -251,7 +319,7 @@ class TestTelegramHandlingAnswers(unittest.TestCase):
 
     @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
     @patch('requests.post')
-    def test_handing_open_message_answer(self, mock_post):
+    def test_handling_open_message_answer(self, mock_post):
         message = TelegramOpenMessage(self.open_record)
         mock_post.return_value.status_code = 200
         resp = Response()
@@ -272,7 +340,7 @@ class TestTelegramHandlingAnswers(unittest.TestCase):
 
     @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
     @patch('requests.post')
-    def test_handing_test_message_answer(self, mock_post):
+    def test_handling_incorrect_test_message_answer(self, mock_post):
         message = TelegramTestMessage(self.test_record)
         mock_post.return_value.status_code = 200
         resp = Response()
@@ -288,6 +356,47 @@ class TestTelegramHandlingAnswers(unittest.TestCase):
                                                                          'messages': [
                                                                              {'user_id': 'user_1', 'type': 'SIMPLE',
                                                                               'text': 'Ответ неверный ;('}]})
+
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    @patch('requests.post')
+    def test_handling_correct_test_message_answer(self, mock_post):
+        message = TelegramTestMessage(self.test_record)
+        mock_post.return_value.status_code = 200
+        resp = Response()
+        resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
+
+        mock_post.return_value = resp
+
+        message.send()
+
+        message.handle_answer('1')
+        self.assertNotEqual(None, mock_post.mock_calls[1])
+        mock_post.assert_called_with('http://example.com/message', json={'webhook': 'http://example.com/webhook/',
+                                                                         'messages': [
+                                                                             {'user_id': 'user_1', 'type': 'SIMPLE',
+                                                                              'text': 'Ответ верный!'}]})
+
+    # Тест на оценку открытого ответа полностью совпадающего с эталонным ответом. Пока не работает
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    @patch('requests.post')
+    def test_handling_correct_open_message_answer(self, mock_post):
+        message = TelegramOpenMessage(self.open_record)
+        mock_post.return_value.status_code = 200
+        resp = Response()
+        resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
+
+        mock_post.return_value = resp
+
+        message.send()
+
+        message.handle_answer('1')
+        self.assertNotEqual(None, mock_post.mock_calls[1])
+        mock_post.assert_called_with('http://example.com/message', json={'webhook': 'http://example.com/webhook/',
+                                                                         'messages': [
+                                                                             {'user_id': 'user_1', 'type': 'SIMPLE',
+                                                                              'text': 'На мой субъективный взгляд, '
+                                                                                      'ответ на 1.0, однако потом '
+                                                                                      'оценку могут изменить.'}]})
 
 
 if __name__ == '__main__':
