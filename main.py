@@ -1,23 +1,22 @@
-import datetime
+"""
+Starting point for the service questions
+"""
 import logging
 
 from api.api import app as flask_app
-from models import db_session
-from schedule.schedule import Schedule
-from tools import Settings
+from db_connector import DBWorker
+from generator.generators import SimpleGenerator
+from generator.router import PersonRouter
 
-logging.basicConfig(level=logging.DEBUG)
-
-default_settings = {"time_period": datetime.timedelta(seconds=30),
-                    "from_time": datetime.time(0),
-                    "to_time": datetime.time(23, 59),
-                    "week_days": [d for d in range(7)],
-                    }
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("api.resources").setLevel(logging.DEBUG)
+logging.getLogger("generator").setLevel(logging.DEBUG)
+logging.getLogger("telegram_connector").setLevel(logging.DEBUG)
 
 if __name__ == '__main__':
-    Settings().setup("data/settings.stg", default_settings)
-    db_session.global_init("data/database.db")
+    DBWorker.init_db_file("sqlite:///data/data.db")
 
-    Schedule(lambda x: 0).from_settings().start()
+    # Schedule(lambda x: 0).from_settings().start()
 
+    router = PersonRouter(SimpleGenerator())
     flask_app.run(host="0.0.0.0", debug=False, port=3000)
