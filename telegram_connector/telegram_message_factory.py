@@ -1,6 +1,10 @@
+"""
+File with Telegram message factory implementation.
+"""
 from __future__ import annotations
 
-from typing import Union, TYPE_CHECKING
+import logging
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
@@ -12,7 +16,9 @@ from telegram_connector.telegram_message import TelegramOpenMessage, TelegramTes
 if TYPE_CHECKING:
     from generator.router import PersonRouter
 
+logger = logging.getLogger(__name__)
 
+# noinspection GrazieInspection,Style,Annotator
 class TelegramMessageFactory(MessageFactory):
     """
     Represents a factory for creating Telegram messages.
@@ -28,12 +34,13 @@ class TelegramMessageFactory(MessageFactory):
         self._messages = []
         self._router = router
 
-    def get_record(self, message_id: int) -> Union[OpenRecord, TestRecord]:
+    @staticmethod
+    def get_record(message_id: int) -> Record:
         r"""
         Retrieves a record from the database.
 
         :param message_id: (:class:`int`) The ID of the message record to retrieve.
-        :return: (:class:`Union`\[:class:`OpenRecord`, :class:`TestRecord`]) The retrieved record object.
+        :return: (:class:`Record`) The retrieved record object.
         """
         with DBWorker() as db_worker:
             return db_worker.scalar(select(Record).where(Record.message_id == message_id))
@@ -43,7 +50,8 @@ class TelegramMessageFactory(MessageFactory):
         Retrieves a message object based on the message ID.
 
         :param message_id: (:class:`int`) The ID of the message to retrieve.
-        :return: (:class:`Union`\[:class:`TelegramOpenMessage`, :class:`TelegramTestMessage`]) The retrieved message object.
+        :return: (:class:`Union`\[:class:`TelegramOpenMessage`, :class:`TelegramTestMessage`]) The retrieved
+        message object.
         """
         record = self.get_record(message_id)
         proxy_message = ProxyMessageFactory()
@@ -57,9 +65,16 @@ class TelegramMessageFactory(MessageFactory):
         This method iterates through all stored messages and sends each one.
         After sending, it clears the stored messages' dictionary.
         """
-        for message in self._messages:
-            message.send()
-        self._messages = []
+        logger.debug("Sending messages...")
+
+        try:
+            for message in self._messages:
+                message.send()
+            self._messages = []
+        except Exception as e:
+            logger.exception(e)
+        else:
+            logger.debug("Messages sent")
 
     def response_handler(self, data: dict) -> None:
         """
@@ -67,8 +82,17 @@ class TelegramMessageFactory(MessageFactory):
 
         :param data: (:class:`dict`) The response data received.
         """
-        message = self.get_message(data['answer']["reply_to"])
-        message.handle_answer(data["answer"]['data'])
+        logger.debug("Handling incoming answer...")
+        try:
+            message = self.get_message(data['message_id'])
+            logger.debug(f"Received message: {data}")
+
+            message.handle_answer(data)
+        except Exception as e:
+            logger.exception(e)
+            raise e
+        else:
+            logger.debug("Answer handled")
 
     def request_delivery(self, user_id: str) -> None:
         """
@@ -76,8 +100,14 @@ class TelegramMessageFactory(MessageFactory):
 
         :param user_id: (:class:`int`) The ID of the user to deliver the message to.
         """
-        self._router.prepare_next(user_id)
-        self.send_messages()
+        logger.debug("Requesting delivery...")
+        try:
+            self._router.prepare_next(user_id)
+            self.send_messages()
+        except Exception as e:
+            logger.exception(e)
+        else:
+            logger.debug("Delivery requested")
 
     def create_open(self, record: OpenRecord) -> None:
         """
@@ -102,6 +132,10 @@ class ProxyMessageFactory(MessageFactory):
         self._message = None
 
     def get_message(self) -> TelegramMessage:
+        """
+        Gets the TelegramMessage object for this factory
+        :return: (:class: `TelegramMessage`) The TelegramMessage object representing the message.
+        """
         return self._message
 
     def create_test(self, record: TestRecord) -> None:

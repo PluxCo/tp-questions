@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from core.answers import OpenRecord, TestRecord
 
 
+# noinspection Style,Annotator
 class PointsCalculator(ABC):
     """
     Abstract class that defines the interface to score records
@@ -39,6 +40,7 @@ class PointsCalculator(ABC):
         """
 
 
+# noinspection Style,Annotator
 class MessageFactory(ABC):
     """
     Abstract class that presents questions to users

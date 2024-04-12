@@ -1,3 +1,6 @@
+"""
+Describes generators used to generate records/questions for people.
+"""
 import datetime
 from abc import ABC, abstractmethod
 from typing import Union, Sequence
@@ -12,6 +15,7 @@ from tools import Settings
 from users import Person
 
 
+# noinspection GrazieInspection,Style,Annotator
 class Generator(ABC):
     """
     Abstract base class for question generators.
@@ -60,6 +64,7 @@ class Generator(ABC):
                               group_by(Question.id)).all()
 
 
+# noinspection Style,Annotator
 class SimpleGenerator(Generator):
     def next_bunch(self, person: Person, count: int = 1) -> Sequence[Union[Question, Record]]:
         # Get planned questions
@@ -79,6 +84,7 @@ class SimpleGenerator(Generator):
         return list(planned) + list(questions)
 
 
+# noinspection Style,Annotator
 class SmartGenerator(Generator):
     def __init__(self, mu=4, sigma=20, correcting_value=0.001):
         self._mu = mu
@@ -121,7 +127,7 @@ class SmartGenerator(Generator):
                     max_target_level = max(
                         gl for pg, gl in person.groups if pg in [x.group_id for x in question.groups])
 
-                    # P stands for probability. Here we are getting the ratio between amount of points and
+                    # P stands for probability. Here we are getting the ratio between number of points and
                     # the time of not answering.
                     p = (datetime.datetime.now() - last_answer.ask_time).total_seconds() / points_sum
 
