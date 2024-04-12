@@ -1,3 +1,6 @@
+"""
+Answer Resource for the API
+"""
 import datetime
 import logging
 
@@ -5,13 +8,15 @@ from flask_restful import Resource, reqparse
 from sqlalchemy import select, desc, func, update
 
 from api.utils import abort_if_doesnt_exist, view_parser
-from models import db_session
-from models.db_session import create_session
-from models.questions import AnswerRecord, AnswerState, QuestionType
+from core.answers import Record, AnswerState, TestRecord, OpenRecord
+from core.questions import Question
+from db_connector import DBWorker
 
-# Request parser for filtering answer resources based on person_id and question_id
+logger = logging.getLogger(__name__)
+
+# Request parser for filtering answer resources based-on-person_id and question_id
 fields_parser = view_parser.copy()
-fields_parser.add_argument('answer', type=dict, required=False, default={})
+fields_parser.add_argument('record', type=dict, required=False, default={})
 
 planned_answer_parser = reqparse.RequestParser()
 planned_answer_parser.add_argument('person_id', type=str, required=True)
@@ -23,101 +28,158 @@ update_answer_parser.add_argument('points', type=float, required=False)
 update_answer_parser.add_argument('state', type=AnswerState, required=False)
 
 
-class AnswerResource(Resource):
+class RecordResource(Resource):
     """
-    Resource for handling individual AnswerRecord instances.
+    Resource for handling individual Record instances.
     """
 
-    @abort_if_doesnt_exist("answer_id", AnswerRecord)
-    def get(self, answer_id):
+    @abort_if_doesnt_exist("record_id", Record)
+    def get(self, record_id):
         """
-        Get the details of a specific AnswerRecord.
+        Get the details of a specific Record.
 
         Args:
-            answer_id (int): The ID of the AnswerRecord.
+            record_id (int): The ID of the Record.
 
         Returns:
-            tuple: A tuple containing the details of the AnswerRecord and HTTP status code.
+            tuple: A tuple containing the details of the Record and HTTP status code.
         """
-        with create_session() as db:
-            # Retrieve the AnswerRecord from the database and convert it to a dictionary
-            db_answer = db.get(AnswerRecord, answer_id).to_dict(rules=("-question",))
-        return db_answer, 200
+        try:
+            with DBWorker() as db:
+                # Retrieve the Record from the database and convert it to a dictionary
+                # noinspection PyArgumentList
+                db_answer = db.get(Record, record_id).to_dict(rules=("-question",))
+            return db_answer, 200
+        except Exception as e:
+            logger.exception(e)
+            return {"message": f"An unexpected error occurred: {str(e)}"}, 500
 
-    @abort_if_doesnt_exist("answer_id", AnswerRecord)
-    def delete(self, answer_id):
-        with create_session() as db:
-            answer = db.get(AnswerRecord, answer_id)
-            db.delete(answer)
-            db.commit()
-        return '', 200
-
-    @abort_if_doesnt_exist("answer_id", AnswerRecord)
-    def patch(self, answer_id):
-        args = {k: v for k, v in update_answer_parser.parse_args().items() if v is not None}
-
-        with create_session() as db:
-            db.execute(update(AnswerRecord).where(AnswerRecord.id == answer_id)
-                       .values(**args))
-            db.commit()
-
-            db_answer = db.get(AnswerRecord, answer_id).to_dict(rules=("-question",))
-        return db_answer, 200
-
-
-class AnswerListResource(Resource):
-    """
-    Resource for handling lists of AnswerRecord instances.
-    """
-
-    def get(self):
+    @abort_if_doesnt_exist("record_id", Record)
+    def delete(self, record_id: int) -> tuple[dict, int]:
         """
-        Get a list of AnswerRecord instances based on optional filtering parameters.
+        Delete a specific Record from the database.
+        :param record_id: Record ID to be deleted
+        """
+        try:
+            with DBWorker() as db:
+                record = db.get(Record, record_id)
+                db.delete(record)
+                db.commit()
+
+            logger.debug(f"Deleted Record {record_id}")
+
+            return {"message": "Record deleted successfully"}, 200
+        except Exception as e:
+            logger.exception(e)
+            return {"message": f"An unexpected error occurred: {str(e)}"}, 500
+
+    @abort_if_doesnt_exist("record_id", Record)
+    def patch(self, record_id):
+        """
+
+        :param record_id:
+        :return:
+        """
+        try:
+            args = {k: v for k, v in update_answer_parser.parse_args().items() if v is not None}
+
+            with DBWorker() as db:
+                db.execute(update(Record).where(Record.id == record_id).values(**args))
+                db.commit()
+
+                db_answer = db.get(Record, record_id)
+
+                logger.debug(f"Updated Record {record_id}")
+                # noinspection PyArgumentList
+                return db_answer.to_dict(rules=("-question",)), 200
+        except Exception as e:
+            logger.exception(e)
+            return {"message": f"An unexpected error occurred: {str(e)}"}, 500
+
+
+class RecordCreationResource(Resource):
+    """
+    Resource for handling lists of Record instances.
+    """
+
+    @staticmethod
+    def _create_question_instance(args):
+        """
+        Create a new Record instance based on the provided arguments.
+
+        Args:
+            args (dict): Parsed arguments for creating a record.
 
         Returns:
-            tuple: A tuple containing the list of AnswerRecord instances and HTTP status code.
+            Record: Instance of the appropriate Record subclass.
         """
-        # Parse the filtering parameters from the request
-        args = fields_parser.parse_args()
+        with DBWorker() as db:
+            question_type = db.get(Question, args['question_id']).type
 
-        # TODO: add adequate parsers
-        answer_filters = args["answer"]
-        if "state" in answer_filters:
-            answer_filters["state"] = AnswerState(answer_filters["state"])
-
-        question_filters = answer_filters.pop("question", {})
-        if "type" in question_filters:
-            question_filters["type"] = QuestionType(question_filters["type"])
-
-        with create_session() as db:
-            # Retrieve AnswerRecord instances from the database based on the filtering parameters
-            db_req = (select(AnswerRecord, func.count(AnswerRecord.id).over())
-                      .filter_by(**answer_filters))
-
-            if question_filters:
-                db_req = db_req.join(AnswerRecord.question).filter_by(**question_filters)
-
-            db_req = (db_req.order_by(args["orderBy"] if args["order"] == "asc" else desc(args["orderBy"]))
-                      .limit(args["resultsCount"])
-                      .offset(args["offset"]))
-
-            answers = []
-            results_total = 0
-            for a, results_total in db.execute(db_req):
-                answers.append(a.to_dict(rules=("-question",)))
-
-        return {"results_total": results_total, "results_count": len(answers), "answers": answers}, 200
+        if question_type == 'TEST':
+            return TestRecord(**args, state=AnswerState.NOT_ANSWERED)
+        elif question_type == 'OPEN':
+            return OpenRecord(**args, state=AnswerState.NOT_ANSWERED)
+        else:
+            raise ValueError("Invalid question type provided")
 
     def post(self):
-        with db_session.create_session() as db:
-            args = planned_answer_parser.parse_args()
+        """
 
-            new_answer = AnswerRecord(person_id=args['person_id'],
-                                      question_id=args['question_id'],
-                                      ask_time=args['ask_time'],
-                                      state=AnswerState.NOT_ANSWERED)
+        :return:
+        """
+        try:
+            with DBWorker() as db:
+                args = planned_answer_parser.parse_args()
+                new_answer = self._create_question_instance(args)
+                db.add(new_answer)
+                db.commit()
+                logger.debug(f"Record {new_answer.id} added successfully")
+            return {"message": "Record was planned successfully"}, 200
+        except Exception as e:
+            logger.exception(e)
+            return {"message": f"An unexpected error occurred: {str(e)}"}, 500
 
-            db.add(new_answer)
-            db.commit()
 
-        return '', 200
+class RecordSearchResource(Resource):
+    @staticmethod
+    def post():
+        """
+        Get a list of Record instances based on optional filtering parameters.
+
+        Returns:
+            tuple: A tuple containing the list of Record instances and HTTP status code.
+        """
+        try:
+            # Parse the filtering parameters from the request
+            args = fields_parser.parse_args()
+
+            logger.debug(f"Record Search parameters provided successfully {args}")
+
+            answer_filters = args.get("record")
+            if "state" in answer_filters:
+                answer_filters["state"] = AnswerState(answer_filters["state"])
+
+            question_filters = answer_filters.pop("question", {})
+
+            with DBWorker() as db:
+                # Retrieve Record instances from the database based on the filtering parameters
+                query = (select(Record, func.count(Record.id).over())
+                         .filter_by(**answer_filters))
+
+                if question_filters:
+                    query = query.join(Record.question).filter_by(**question_filters)
+
+                query = (query.order_by(args["orderBy"] if args["order"] == "asc" else desc(args["orderBy"]))
+                         .limit(args["resultsCount"])
+                         .offset(args["offset"]))
+
+                records = []
+                results_total = 0
+                for record, results_total in db.execute(query):
+                    records.append(record.to_dict(rules=("-question",)))
+
+            return {"results_total": results_total, "results_count": len(records), "records": records}, 200
+        except Exception as e:
+            logger.exception(e)
+            return {"message": f"An unexpected error occurred: {str(e)}"}, 500

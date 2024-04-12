@@ -1,3 +1,6 @@
+"""
+Deprecated Settings Resource for the API
+"""
 import datetime
 
 from flask_restful import Resource, reqparse
@@ -17,7 +20,8 @@ class SettingsResource(Resource):
     Resource for handling application settings.
     """
 
-    def get(self):
+    @staticmethod
+    def get():
         """
         Get the current application settings.
 
