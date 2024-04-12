@@ -15,12 +15,11 @@ class Webhook(Resource):
     """
 
     # Request parser for handling incoming answer data
-    # type - message, request
-    # data - {'answer': {'reply_to': 'message-id', 'data': 'text-of-the-answer-or-button-id'}, 'user_id': 'user-id'}
 
     answer_parser = reqparse.RequestParser()
     answer_parser.add_argument("type", type=str, required=True)
-    answer_parser.add_argument("data", type=dict, required=True)
+    answer_parser.add_argument("session", type=dict, required=False)
+    answer_parser.add_argument("feedback", type=dict, required=False)
     _factory: TelegramMessageFactory = None
 
     def post(self):
@@ -30,14 +29,18 @@ class Webhook(Resource):
         args = self.answer_parser.parse_args()
         try:
             match args['type']:
-                case "message":
-                    logging.debug(f"Received message {args}")
-                    self._factory.response_handler(args['data'])
-                case "request":
-                    logging.debug(f"Received request {args}")
-                    self._factory.request_delivery(args['data']['user_id'])
+                case "FEEDBACK":
+                    logging.debug(f"Received feedback {args}")
+                    self._factory.response_handler(args['feedback'])
+                    if args['session'] and args['session']['state'] == "OPEN":
+                        self._factory.request_delivery(args['session']['user_id'])
 
-            return {"clear_buttons": True}, 200
+                case "SESSION":
+                    logging.debug(f"Received request {args}")
+                    if args['session'] and args['session']['state'] == "OPEN":
+                        self._factory.request_delivery(args['session']['user_id'])
+
+            return "Handled Successfully", 200
         except Exception as e:
             logging.exception(e)
-            return {"message": str(e)}, 500
+            return {"message": str(e)}, 400

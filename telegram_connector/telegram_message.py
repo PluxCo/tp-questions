@@ -20,7 +20,7 @@ class TelegramMessage(ABC):
 
     def __init__(self, record: Record):
         self._record = record
-        self._questions_webhook = os.getenv("QUESTIONS_URL") + "/webhook/"
+        self._service_id = os.getenv("SERVICE_ID")
         self._destination = os.getenv('TELEGRAM_API') + "/message"
 
         self.message_id = record.message_id
@@ -42,12 +42,16 @@ class TelegramOpenMessage(TelegramMessage):
     def __init__(self, open_record: OpenRecord):
         super().__init__(open_record)
 
-    def handle_answer(self, answer: str):
+    def handle_answer(self, answer: dict):
+        if answer["type"] == "BUTTON":
+            raise ValueError('Button not supported')
+        text = answer["text"]
+
         with DBWorker() as db:
             self._record = db.merge(self._record)
-            self._record.set_answer(answer)
+            self._record.set_answer(text)
             score = self._record.score(SimpleCalculator())
-            request = {"webhook": self._questions_webhook,
+            request = {"service_id": self._service_id,
                        "messages": [{
                            "user_id": self._record.person_id,
                            "type": "SIMPLE",
@@ -69,7 +73,7 @@ class TelegramOpenMessage(TelegramMessage):
             }
 
             resp = requests.post(self._destination,
-                                 json={"webhook": self._questions_webhook,
+                                 json={"service_id": self._service_id,
                                        "messages": [message]})
             self.message_id = resp.json()["sent_messages"][0]["message_id"]
             self._record.transfer(self.message_id)
@@ -80,15 +84,19 @@ class TelegramTestMessage(TelegramMessage):
     def __init__(self, test_record: TestRecord):
         super().__init__(test_record)
 
-    def handle_answer(self, answer: str):
+    def handle_answer(self, answer: dict):
+        if answer["type"] != "BUTTON":
+            raise ValueError('Reply or Simple Message not supported')
+        text = str(answer["button_id"])
+
         with DBWorker() as db:
             self._record = db.merge(self._record)
-            self._record.set_answer(answer)
+            self._record.set_answer(text)
             score = self._record.score(SimpleCalculator())
 
             if score == 1:
                 request = {
-                    "webhook": self._questions_webhook,
+                    "service_id": self._service_id,
                     "messages": [{
                         "user_id": self._record.person_id,
                         "type": "SIMPLE",
@@ -96,7 +104,7 @@ class TelegramTestMessage(TelegramMessage):
                     }]}
             else:
                 request = {
-                    "webhook": self._questions_webhook,
+                    "service_id": self._service_id,
                     "messages": [{
                         "user_id": self._record.person_id,
                         "type": "SIMPLE",
@@ -116,7 +124,7 @@ class TelegramTestMessage(TelegramMessage):
                 "buttons": ["Не знаю"] + json.loads(self._record.question.options)
             }
             resp = requests.post(self._destination,
-                                 json={"webhook": self._questions_webhook,
+                                 json={"service_id": self._service_id,
                                        "messages": [message]})
             self.message_id = resp.json()["sent_messages"][0]["message_id"]
             self._record.transfer(self.message_id)

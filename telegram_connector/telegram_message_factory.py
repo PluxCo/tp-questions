@@ -4,7 +4,7 @@ File with Telegram message factory implementation.
 from __future__ import annotations
 
 import logging
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
@@ -35,12 +35,12 @@ class TelegramMessageFactory(MessageFactory):
         self._router = router
 
     @staticmethod
-    def get_record(message_id: int) -> Union[OpenRecord, TestRecord]:
+    def get_record(message_id: int) -> Record:
         r"""
         Retrieves a record from the database.
 
         :param message_id: (:class:`int`) The ID of the message record to retrieve.
-        :return: (:class:`Union`\[:class:`OpenRecord`, :class:`TestRecord`]) The retrieved record object.
+        :return: (:class:`Record`) The retrieved record object.
         """
         with DBWorker() as db_worker:
             return db_worker.scalar(select(Record).where(Record.message_id == message_id))
@@ -84,12 +84,13 @@ class TelegramMessageFactory(MessageFactory):
         """
         logger.debug("Handling incoming answer...")
         try:
-            message = self.get_message(data['answer']["reply_to"])
+            message = self.get_message(data['message_id'])
             logger.debug(f"Received message: {data}")
 
-            message.handle_answer(data["answer"]['data'])
+            message.handle_answer(data)
         except Exception as e:
             logger.exception(e)
+            raise e
         else:
             logger.debug("Answer handled")
 
