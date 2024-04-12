@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from core.routes import PointsCalculator, MessageFactory
 
 
+# noinspection GrazieInspection
 class AnswerState(enum.Enum):
     """
     Enumeration of possible record states for :class:`Record`
@@ -32,6 +33,7 @@ class AnswerState(enum.Enum):
     ANSWERED = 2
 
 
+# noinspection GrazieInspection,Style,PyTypeChecker,Annotator
 class Record(SqlAlchemyBase, SerializerMixin):
     r"""
     Abstract class that represents an answer record of a particular question.
@@ -54,7 +56,7 @@ class Record(SqlAlchemyBase, SerializerMixin):
     type: Mapped[str]
 
     question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
-    question: Mapped["Question"] = relationship(lazy="joined", back_populates="_records")
+    question: Mapped["Question"] = relationship(lazy="joined", back_populates="records")
     person_id: Mapped[str]
     message_id: Mapped[Optional[str]]
     person_answer: Mapped[Optional[str]]
@@ -68,14 +70,14 @@ class Record(SqlAlchemyBase, SerializerMixin):
     def __init__(self, *args, **kwargs):
         r""":key id: (:class:`int`) The primary key of the answer.
         :key type: (:class:`str`) The type of the answer
-        :key question_id: (:class:`int`) Foreign key referencing the questions table.
+        :key question_id: (:class:`int`) Foreign key referencing the questions' table.
         :key question: (:class:`Question`) Relationship to the corresponding question.
         :key person_id: (:class:`str`) The ID of the person providing the answer.
         :key person_answer: (:class:`Optional`\[:class:`str`]) The answer provided by the person.
         :key answer_time: (:class:`Optional`\[:class:`datetime.datetime`]) The time when the answer was provided.
         :key ask_time: (:class:`datetime.datetime`) The time when the question was asked.
         :key state: (:class:`AnswerState`) The state of the answer.
-        :key points: (:class:`int`) Amount of points scored for this answer (from 0 to 1)
+        :key points: (:class:`int`) Number of points scored for this answer (from 0 to 1)
         """
         super().__init__(*args, **kwargs)
 
@@ -106,7 +108,6 @@ class Record(SqlAlchemyBase, SerializerMixin):
     def transfer(self, message_id):
         """Method that changes :class:`RecordState` after transferring"""
 
-        # noinspection PyTypeChecker
         self.state = AnswerState.TRANSFERRED
         self.ask_time = datetime.datetime.now()
         self.message_id = message_id
@@ -121,11 +122,11 @@ class Record(SqlAlchemyBase, SerializerMixin):
         :return: None
         """
 
-        # noinspection PyTypeChecker
         self.answer_time = datetime.datetime.now()
         self.person_answer = answer
 
 
+# noinspection GrazieInspection
 class TestRecord(Record):
     """
     TestRecord is an instance of :class:`Record`
@@ -144,6 +145,7 @@ class TestRecord(Record):
         factory.create_test(self)
 
 
+# noinspection GrazieInspection
 class OpenRecord(Record):
     """
     OpenRecord is an instance of :class:`Record`

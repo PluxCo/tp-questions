@@ -12,6 +12,7 @@ from db_connector import SqlAlchemyBase
 from db_connector.types import TextJson
 
 
+# noinspection Style,Annotator
 class QuestionGroupAssociation(SqlAlchemyBase, SerializerMixin):
     """
     Association table between questions and groups.
@@ -28,6 +29,7 @@ class QuestionGroupAssociation(SqlAlchemyBase, SerializerMixin):
     group_id: Mapped[str] = mapped_column()
 
 
+# noinspection GrazieInspection,Style,Annotator
 class Question(SqlAlchemyBase, SerializerMixin):
     r"""
     Represents a question.
@@ -55,7 +57,7 @@ class Question(SqlAlchemyBase, SerializerMixin):
     level: Mapped[int]
     article_url: Mapped[Optional[str]]
 
-    _records: Mapped[List[Record]] = relationship(cascade='all, delete-orphan', back_populates='question')
+    records: Mapped[List[Record]] = relationship(cascade='all, delete-orphan', back_populates='question')
 
     __mapper_args__ = {"polymorphic_identity": "question", "polymorphic_on": "type"}
 
@@ -70,6 +72,7 @@ class Question(SqlAlchemyBase, SerializerMixin):
         return Record(question_id=self.id, person_id=person_id, question=self)
 
 
+# noinspection GrazieInspection
 class TestQuestion(Question):
     """
     Represents a test question.
@@ -90,6 +93,7 @@ class TestQuestion(Question):
         return TestRecord(question_id=self.id, person_id=person_id, question=self)
 
 
+# noinspection GrazieInspection
 class OpenQuestion(Question):
     """
     Represents an open question.

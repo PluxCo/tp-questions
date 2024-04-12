@@ -15,6 +15,7 @@ SqlAlchemyBase = declarative.declarative_base()
 __factory: Optional[Callable] = None
 
 
+# noinspection GrazieInspection
 class DBWorker:
     """
     A wrapper around an SQLAlchemy session object.

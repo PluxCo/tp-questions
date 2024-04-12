@@ -1,14 +1,23 @@
+"""
+File which contains deprecated functionality of Settings.
+"""
 import os
 import pickle
 
 
+# noinspection Style,Annotator
 class Settings(dict):
     """
     Singleton class for managing application settings.
     """
 
+    instance = None
+
     def __init__(self):
         super().__init__()
+        self.file = None
+        self._update_handlers = None
+        self._update_handlers = None
 
     def __new__(cls):
         """

@@ -1,3 +1,6 @@
+"""
+This module provides the API for the question service
+"""
 from flask import Flask
 from flask_restful import Api
 

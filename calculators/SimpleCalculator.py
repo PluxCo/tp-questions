@@ -1,7 +1,11 @@
+"""
+File that contains the SimpleCalculator class that represents a calculator which scores records.
+"""
 from core.answers import OpenRecord, TestRecord
 from core.routes import PointsCalculator
 
 
+# noinspection Style,Annotator
 class SimpleCalculator(PointsCalculator):
     """
     Represents a calculator for scoring answers.
