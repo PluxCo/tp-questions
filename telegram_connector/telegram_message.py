@@ -121,7 +121,7 @@ class TelegramTestMessage(TelegramMessage):
                 "user_id": self._record.person_id,
                 "type": "WITH_BUTTONS",
                 "text": self._record.question.text,
-                "buttons": ["Не знаю"] + json.loads(self._record.question.options)
+                "buttons": ["Не знаю"] + self._record.question.options
             }
             resp = requests.post(self._destination,
                                  json={"service_id": self._service_id,
