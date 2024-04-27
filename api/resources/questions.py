@@ -156,9 +156,18 @@ class QuestionCreationResource(Resource):
         """
         question_type = args.get('type')
         if question_type == 'TEST':
-            return TestQuestion(**args)
+            return TestQuestion(text=args["text"],
+                                subject=args["subject"],
+                                answer=args["answer"],
+                                level=args["level"],
+                                article_url=args["article_url"],
+                                options=args["options"])
         elif question_type == 'OPEN':
-            return OpenQuestion(**args)
+            return OpenQuestion(text=args["text"],
+                                subject=args["subject"],
+                                answer=args["answer"],
+                                level=args["level"],
+                                article_url=args["article_url"])
         else:
             raise ValueError("Invalid question type provided")
 
@@ -191,7 +200,7 @@ class QuestionCreationResource(Resource):
                 db.commit()
 
                 logger.debug(f"Question {db_question.id} instance was successfully created")
-                return QuestionResource().get(question_id=db_question.id), 200
+                return QuestionResource().get(question_id=db_question.id)
         except Exception as e:
             logger.exception(e)
             return {"message": f"An unexpected error occurred: {str(e)}"}, 500
