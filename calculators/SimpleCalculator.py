@@ -28,7 +28,6 @@ class SimpleCalculator(PointsCalculator):
         :param record: (:class:`OpenRecord`) The open question record to score.
         :return: (:class:`float`) The score for the open question.
         """
-        # TODO: add neural network
         return 0.5
 
     def score_test(self, record: TestRecord) -> float:

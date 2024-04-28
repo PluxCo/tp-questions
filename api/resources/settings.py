@@ -33,7 +33,7 @@ class SettingsResource(Resource):
         current_settings["from_time"] = current_settings["from_time"].isoformat()
         current_settings["to_time"] = current_settings["to_time"].isoformat()
 
-        return current_settings, 200
+        return current_settings, 410
 
     def post(self):
         """

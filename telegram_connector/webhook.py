@@ -7,6 +7,8 @@ from flask_restful import Resource, reqparse
 
 from telegram_connector.telegram_message_factory import TelegramMessageFactory
 
+logger = logging.getLogger(__name__)
+
 
 # noinspection Style,Annotator
 class Webhook(Resource):
@@ -30,17 +32,17 @@ class Webhook(Resource):
         try:
             match args['type']:
                 case "FEEDBACK":
-                    logging.debug(f"Received feedback {args}")
+                    logger.debug(f"Received feedback {args}")
                     self._factory.response_handler(args['feedback'])
                     if args['session'] and args['session']['state'] == "OPEN":
                         self._factory.request_delivery(args['session']['user_id'])
 
                 case "SESSION":
-                    logging.debug(f"Received request {args}")
+                    logger.debug(f"Received request {args}")
                     if args['session'] and args['session']['state'] == "OPEN":
                         self._factory.request_delivery(args['session']['user_id'])
 
             return "Handled Successfully", 200
         except Exception as e:
-            logging.exception(e)
+            logger.exception(e)
             return {"message": str(e)}, 400
