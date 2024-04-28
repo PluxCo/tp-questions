@@ -38,12 +38,12 @@ class HelpfulGenerators:
     @staticmethod
     def generate_test_record(session):
         question = TestQuestion(text='Sample Question',
-                                     id=3,
-                                     subject='Sample Subject',
-                                     options='["1", "2", "3", "4"]',
-                                     answer='1',
-                                     level=1,
-                                     article_url='https://example.com')
+                                id=3,
+                                subject='Sample Subject',
+                                options='["1", "2", "3", "4"]',
+                                answer='1',
+                                level=1,
+                                article_url='https://example.com')
 
         record = TestRecord(
             question_id=question.id,
@@ -87,7 +87,7 @@ class TestCatchingResponsesSentMessages(unittest.TestCase):
         self.telegram_open_message.send()
         self.assertEqual("123", self.telegram_open_message.message_id)
 
-    def test_t_message(self, mock_post):
+    def test_test_message(self, mock_post):
         mock_post.return_value.status_code = 200
         resp = Response()
         resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
@@ -105,7 +105,7 @@ class TestCatchingResponsesSentMessages(unittest.TestCase):
         mock_post.return_value = resp
         self.assertRaises(Exception, self.telegram_open_message.send)
 
-    def test_t_message_with_weird_status_code(self, mock_post):
+    def test_test_message_with_weird_status_code(self, mock_post):
         mock_post.return_value.status_code = 418  # I’m a teapot
         resp = Response()
         resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
@@ -123,7 +123,7 @@ class TestCatchingResponsesSentMessages(unittest.TestCase):
         mock_post.return_value = resp
         self.assertRaises(Exception, self.telegram_open_message.send)  # Никаких проверок, что message id int
 
-    def test_t_message_with_messed_up_response_message_id(self, mock_post):
+    def test_test_message_with_messed_up_response_message_id(self, mock_post):
         mock_post.return_value.status_code = 418  # I’m a teapot
         resp = Response()
         resp._content = b'{"sent_messages": [{"message_id": "aaa"}]}'
@@ -140,7 +140,7 @@ class TestCatchingResponsesSentMessages(unittest.TestCase):
         mock_post.return_value = resp
         self.assertRaises(Exception, self.telegram_open_message.send)
 
-    def test_t_message_with_messed_up_response(self, mock_post):
+    def test_test_message_with_messed_up_response(self, mock_post):
         mock_post.return_value.status_code = 200
         resp = Response()
         resp._content = b'{"sent_messages": []}'
@@ -153,7 +153,8 @@ class TestCatchingResponsesSentMessages(unittest.TestCase):
 @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
 @patch('requests.post')
 class TestSendingMessages(unittest.TestCase):
-    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com",
+                             "SERVICE_ID": '045122869'})
     def setUp(self):
         DBWorker.init_db_file("sqlite:///:memory:", force=True)
         self.session = DBWorker().session
@@ -168,7 +169,7 @@ class TestSendingMessages(unittest.TestCase):
         # Clean up resources after each test
         self.session.close()
 
-    def test_t_message_with_good_response(self, mock_post):
+    def test_test_message_with_good_response(self, mock_post):
         mock_post.return_value.status_code = 200
         resp = Response()
         resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
@@ -176,12 +177,9 @@ class TestSendingMessages(unittest.TestCase):
         mock_post.return_value = resp
         self.telegram_test_message.send()
 
-        mock_post.assert_called_with('http://example.com/message', json={'webhook': 'http://example.com/webhook/',
-                                                                         'messages': [{'user_id': 'user_1',
-                                                                                       'type': 'WITH_BUTTONS',
-                                                                                       'text': 'Sample Question',
-                                                                                       'buttons': ['Не знаю', '1', '2',
-                                                                                                   '3', '4']}]})
+        mock_post.assert_called_with('http://example.com/message', json={'service_id': '045122869', 'messages':
+            [{'user_id': 'user_1', 'type': 'WITH_BUTTONS', 'text': 'Sample Question',
+              'buttons': ['Не знаю', '1', '2', '3', '4']}]})
 
     def test_open_message_with_good_response(self, mock_post):
         mock_post.return_value.status_code = 200
@@ -191,14 +189,14 @@ class TestSendingMessages(unittest.TestCase):
         mock_post.return_value = resp
         self.telegram_open_message.send()
 
-        mock_post.assert_called_with('http://example.com/message', json={'webhook': 'http://example.com/webhook/',
+        mock_post.assert_called_with('http://example.com/message', json={'service_id': '045122869',
                                                                          'messages': [{'user_id': 'user_1',
                                                                                        'text': 'Sample Question',
                                                                                        'type': 'SIMPLE'}]})
 
-    def test_t_message_without_response(self, mock_post):
+    def test_test_message_without_response(self, mock_post):
         self.assertRaises(Exception, self.telegram_test_message.send)
-        #Here can be your custom exception
+        # Here can be your custom exception
 
     def test_open_message_without_response(self, mock_post):
         self.assertRaises(Exception, self.telegram_open_message.send)
@@ -223,7 +221,7 @@ class TestUpdatingDbAfterSendingMessage(unittest.TestCase):
         # Clean up resources after each test
         self.session.close()
 
-    def test_t_question(self, mock_post):
+    def test_test_question(self, mock_post):
         mock_post.return_value.status_code = 200
         resp = Response()
         resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
@@ -252,10 +250,12 @@ class TestUpdatingDbAfterSendingMessage(unittest.TestCase):
         self.assertEqual(updated_open_record.state, AnswerState.TRANSFERRED)
 
 
-@patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+@patch.dict(os.environ,
+            {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
 @patch('requests.post')
 class TestTelegramHandlingAnswers(unittest.TestCase):
-    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com",
+                             "SERVICE_ID": "045122869"})
     def setUp(self):
         DBWorker.init_db_file("sqlite:///:memory:", force=True)
         self.session = DBWorker().session
@@ -278,14 +278,11 @@ class TestTelegramHandlingAnswers(unittest.TestCase):
 
         self.telegram_open_message.send()
 
-        self.telegram_open_message.handle_answer('0')
+        self.telegram_open_message.handle_answer({'type': 'SIMPLE', 'text': '0'})
         self.assertNotEqual(None, mock_post.mock_calls[1])
-        mock_post.assert_called_with('http://example.com/message', json={'webhook': 'http://example.com/webhook/',
-                                                                         'messages': [
-                                                                             {'user_id': 'user_1', 'type': 'SIMPLE',
-                                                                              'text': 'На мой субъективный взгляд, '
-                                                                                      'ответ на 0.5, однако потом '
-                                                                                      'оценку могут изменить.'}]})
+        mock_post.assert_called_with('http://example.com/message', json={'service_id': '045122869', 'messages':
+            [{'user_id': 'user_1', 'type': 'SIMPLE',
+              'text': 'На мой субъективный взгляд, ответ на 0.5, однако потом оценку могут изменить.'}]})
 
     def test_incorrect_test_message_answer(self, mock_post):
         mock_post.return_value.status_code = 200
@@ -296,12 +293,7 @@ class TestTelegramHandlingAnswers(unittest.TestCase):
 
         self.telegram_test_message.send()
 
-        self.telegram_test_message.handle_answer('0')
-        self.assertNotEqual(None, mock_post.mock_calls[1])
-        mock_post.assert_called_with('http://example.com/message', json={'webhook': 'http://example.com/webhook/',
-                                                                         'messages': [
-                                                                             {'user_id': 'user_1', 'type': 'SIMPLE',
-                                                                              'text': 'Ответ неверный ;('}]})
+        self.assertRaises(Exception, self.telegram_test_message.handle_answer, '0')
 
     def test_correct_test_message_answer(self, mock_post):
         mock_post.return_value.status_code = 200
@@ -312,14 +304,23 @@ class TestTelegramHandlingAnswers(unittest.TestCase):
 
         self.telegram_test_message.send()
 
-        self.telegram_test_message.handle_answer('1')
+        self.telegram_test_message.handle_answer({'type': 'BUTTON', 'button_id': '1'})
         self.assertNotEqual(None, mock_post.mock_calls[1])
-        mock_post.assert_called_with('http://example.com/message', json={'webhook': 'http://example.com/webhook/',
-                                                                         'messages': [
-                                                                             {'user_id': 'user_1', 'type': 'SIMPLE',
-                                                                              'text': 'Ответ верный!'}]})
+        mock_post.assert_called_with('http://example.com/message',
+                                     json={'service_id': '045122869', 'messages': [
+                                         {'user_id': 'user_1', 'type': 'SIMPLE', 'text': 'Ответ верный!'}]})
 
-    def test_correct_open_message_answer(self, mock_post):
+    def test_test_message_answer_without_type(self, mock_post):
+        mock_post.return_value.status_code = 200
+        resp = Response()
+        resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
+
+        mock_post.return_value = resp
+
+        self.telegram_test_message.send()
+        self.assertRaises(Exception, self.telegram_test_message.handle_answer, {'button_id': '1'})
+
+    def test_open_message_answer_without_type(self, mock_post):
         mock_post.return_value.status_code = 200
         resp = Response()
         resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
@@ -327,15 +328,18 @@ class TestTelegramHandlingAnswers(unittest.TestCase):
         mock_post.return_value = resp
 
         self.telegram_open_message.send()
+        self.assertRaises(Exception, self.telegram_test_message.handle_answer, {'text': 'Hello world'})
 
-        self.telegram_open_message.handle_answer('1')
-        self.assertNotEqual(None, mock_post.mock_calls[1])
-        mock_post.assert_called_with('http://example.com/message', json={'webhook': 'http://example.com/webhook/',
-                                                                         'messages': [
-                                                                             {'user_id': 'user_1', 'type': 'SIMPLE',
-                                                                              'text': 'На мой субъективный взгляд, '
-                                                                                      'ответ на 0.5, однако потом '
-                                                                                      'оценку могут изменить.'}]})
+    def test_test_message_with_incorrect_type_of_answer(self, mock_post):
+        mock_post.return_value.status_code = 200
+        resp = Response()
+        resp._content = b'{"sent_messages": [{"message_id": "123"}]}'
+
+        mock_post.return_value = resp
+
+        self.telegram_test_message.send()
+
+        self.assertRaises(Exception, self.telegram_test_message.handle_answer, 1)
 
 
 if __name__ == '__main__':
