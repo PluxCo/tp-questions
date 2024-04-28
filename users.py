@@ -62,7 +62,7 @@ class Person:
                             headers={"Authorization": os.getenv("FUSIONAUTH_TOKEN")})
 
         if resp.status_code != 200:
-            raise Exception(resp.status_code, resp.text)
+            raise Exception(resp.status_code, resp.text, person_id)
 
         resp = resp.json()['user']
 

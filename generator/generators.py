@@ -123,6 +123,7 @@ class SmartGenerator(Generator):
                                              where(Record.person_id == person.id,
                                                    Record.question_id == question.id))
 
+                    # get rid of this: Settings()["time_period"]
                     periods_count = (datetime.datetime.now() - first_answer.ask_time) / Settings()["time_period"]
                     max_target_level = max(
                         gl for pg, gl in person.groups if pg in [x.group_id for x in question.groups])
@@ -144,16 +145,16 @@ class SmartGenerator(Generator):
 
             db.expunge_all()
 
-        with_val = list(filter(lambda x: not np.isnan(x), probabilities))
-        without_val_count = len(person_questions) - len(with_val)
+        # with_val = list(filter(lambda x: not np.isnan(x), probabilities))
+        # without_val_count = len(person_questions) - len(with_val)
 
-        if with_val:
-            increased_avg = (sum(with_val) + without_val_count * max(with_val)) / len(person_questions)
-            # Да это ж круто!
-        else:
-            increased_avg = 1
+        # if with_val:
+        #     increased_avg = (sum(with_val) + without_val_count * max(with_val)) / len(person_questions)
+        #     # Да это ж круто!
+        # else:
+        #     increased_avg = 1
 
-        probabilities[np.isnan(probabilities)] = increased_avg
+        probabilities[np.isnan(probabilities)] = 10 * probabilities.max()
         probabilities /= sum(probabilities)
 
         # Randomly select questions based on calculated probabilities
