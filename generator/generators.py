@@ -32,19 +32,18 @@ class Generator(ABC):
         """
 
     @staticmethod
-    def _get_planned(person: Person) -> Sequence[Record]:
+    def _get_planned(person: Person, db) -> Sequence[Record]:
         r"""
         Get planned question answers for a person.
 
         :param person: (:class:`Person`) The person for whom planned question answers are retrieved.
         :return: (:class:`List`\[:class:`Record`]) List of planned question answers.
         """
-        with DBWorker() as db:
-            return db.scalars(select(Record).
-                              where(Record.person_id == person.id,
-                                    Record.ask_time <= datetime.datetime.now(),
-                                    Record.state == AnswerState.NOT_ANSWERED).
-                              order_by(Record.ask_time)).all()
+        return db.scalars(select(Record).
+                          where(Record.person_id == person.id,
+                                Record.ask_time <= datetime.datetime.now(),
+                                Record.state == AnswerState.NOT_ANSWERED).
+                          order_by(Record.ask_time)).all()
 
     @staticmethod
     def _get_person_questions(person: Person, db) -> Sequence[Question]:
@@ -54,7 +53,7 @@ class Generator(ABC):
         :param person: (:class:`Person`) The person for whom questions are retrieved.
         :return: (:class:`List`\[:class:`Question`]) List of questions for the person.
         """
-        planned = Generator._get_planned(person)
+        planned = Generator._get_planned(person, db)
 
         return db.scalars(select(Question).
                           join(Question.groups).
@@ -66,12 +65,12 @@ class Generator(ABC):
 # noinspection Style,Annotator
 class SimpleGenerator(Generator):
     def next_bunch(self, person: Person, count: int = 1) -> Sequence[Union[Question, Record]]:
-        # Get planned questions
-        planned = self._get_planned(person)
-        if len(planned) >= count:
-            return planned[:count]
-
         with DBWorker() as db:
+            # Get planned questions
+            planned = self._get_planned(person, db)
+            if len(planned) >= count:
+                return planned[:count]
+
             # Get available questions for the person
             person_questions = self._get_person_questions(person, db)
 
@@ -94,7 +93,7 @@ class SmartGenerator(Generator):
     def next_bunch(self, person, count: int = 1) -> Sequence[Union[Question, Record]]:
         with DBWorker() as db:
             # Get planned questions
-            planned = self._get_planned(person)
+            planned = self._get_planned(person, db)
             if len(planned) >= count:
                 return planned[:count]
 
