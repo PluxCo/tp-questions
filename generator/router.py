@@ -13,6 +13,7 @@ from users import Person
 
 logger = logging.getLogger(__name__)
 
+
 class PersonRouter:
     """
     Router for the generator class that handles routing of messages.
@@ -50,8 +51,7 @@ class PersonRouter:
                 db.commit()
                 logger.debug(f"Question/record for person {person_id} has been prepared")
         except Exception as e:
-            logger.exception(e)
-            print(f"An error occurred while preparing next question/record for person {person_id}: {str(e)}")
+            logger.exception(f"An error occurred while preparing next question/record for person {person_id}: {str(e)}")
 
     def route_multiple(self):
         """
