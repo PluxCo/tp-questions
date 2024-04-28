@@ -158,9 +158,11 @@ class SmartGenerator(Generator):
         # else:
         #     increased_avg = 1
 
-        probabilities[np.isnan(probabilities)] = 10 * np.nanmax(probabilities)
+        max_p = np.nanmax(probabilities)
 
-        if not any(probabilities):
+        probabilities[np.isnan(probabilities)] = 10 * max_p
+
+        if not any(probabilities) or np.isnan(max_p):
             probabilities = np.ones(len(probabilities))
 
         probabilities /= sum(probabilities)
