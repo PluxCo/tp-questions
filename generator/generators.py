@@ -32,48 +32,47 @@ class Generator(ABC):
         """
 
     @staticmethod
-    def _get_planned(person: Person) -> Sequence[Record]:
+    def _get_planned(person: Person, db) -> Sequence[Record]:
         r"""
         Get planned question answers for a person.
 
         :param person: (:class:`Person`) The person for whom planned question answers are retrieved.
         :return: (:class:`List`\[:class:`Record`]) List of planned question answers.
         """
-        with DBWorker() as db:
-            return db.scalars(select(Record).
-                              where(Record.person_id == person.id,
-                                    Record.ask_time <= datetime.datetime.now(),
-                                    Record.state == AnswerState.NOT_ANSWERED).
-                              order_by(Record.ask_time)).all()
+        return db.scalars(select(Record).
+                          where(Record.person_id == person.id,
+                                Record.ask_time <= datetime.datetime.now(),
+                                Record.state == AnswerState.NOT_ANSWERED).
+                          order_by(Record.ask_time)).all()
 
     @staticmethod
-    def _get_person_questions(person: Person) -> Sequence[Question]:
+    def _get_person_questions(person: Person, db) -> Sequence[Question]:
         r"""
         Get questions for a person that are not in the planned list.
 
         :param person: (:class:`Person`) The person for whom questions are retrieved.
         :return: (:class:`List`\[:class:`Question`]) List of questions for the person.
         """
-        with DBWorker() as db:
-            planned = Generator._get_planned(person)
+        planned = Generator._get_planned(person, db)
 
-            return db.scalars(select(Question).
-                              join(Question.groups).
-                              where(QuestionGroupAssociation.group_id.in_(pg for pg, pl in person.groups),
-                                    Question.id.notin_(qa.question_id for qa in planned)).
-                              group_by(Question.id)).all()
+        return db.scalars(select(Question).
+                          join(Question.groups).
+                          where(QuestionGroupAssociation.group_id.in_(pg for pg, pl in person.groups),
+                                Question.id.notin_(qa.question_id for qa in planned)).
+                          group_by(Question.id)).all()
 
 
 # noinspection Style,Annotator
 class SimpleGenerator(Generator):
     def next_bunch(self, person: Person, count: int = 1) -> Sequence[Union[Question, Record]]:
-        # Get planned questions
-        planned = self._get_planned(person)
-        if len(planned) >= count:
-            return planned[:count]
+        with DBWorker() as db:
+            # Get planned questions
+            planned = self._get_planned(person, db)
+            if len(planned) >= count:
+                return planned[:count]
 
-        # Get available questions for the person
-        person_questions = self._get_person_questions(person)
+            # Get available questions for the person
+            person_questions = self._get_person_questions(person, db)
 
         # Randomly select questions from available ones
 
@@ -94,12 +93,12 @@ class SmartGenerator(Generator):
     def next_bunch(self, person, count: int = 1) -> Sequence[Union[Question, Record]]:
         with DBWorker() as db:
             # Get planned questions
-            planned = self._get_planned(person)
+            planned = self._get_planned(person, db)
             if len(planned) >= count:
                 return planned[:count]
 
             # Get available questions for the person
-            person_questions = self._get_person_questions(person)
+            person_questions = self._get_person_questions(person, db)
             probabilities = np.ones(len(person_questions))
 
             if not person_questions:
@@ -124,7 +123,7 @@ class SmartGenerator(Generator):
                                                    Record.question_id == question.id))
 
                     # get rid of this: Settings()["time_period"]
-                    periods_count = (datetime.datetime.now() - first_answer.ask_time) / Settings()["time_period"]
+                    periods_count = (datetime.datetime.now() - first_answer.ask_time) / datetime.timedelta(days=1)
                     max_target_level = max(
                         gl for pg, gl in person.groups if pg in [x.group_id for x in question.groups])
 
@@ -138,6 +137,11 @@ class SmartGenerator(Generator):
 
                     # adding the suitability of level
                     p *= np.exp(-0.5 * (max_target_level - question.level) ** 2)
+
+                    if db.execute(select(func.count(Record.id)).
+                                          where(Record.question_id == question.id,
+                                                Record.state != AnswerState.ANSWERED)).one()[0] != 0:
+                        p *= 0
 
                     probabilities[i] = p
                 else:
@@ -154,7 +158,13 @@ class SmartGenerator(Generator):
         # else:
         #     increased_avg = 1
 
-        probabilities[np.isnan(probabilities)] = 10 * probabilities.max()
+        max_p = np.nanmax(probabilities)
+
+        probabilities[np.isnan(probabilities)] = 10 * max_p
+
+        if not any(probabilities) or np.isnan(max_p):
+            probabilities = np.ones(len(probabilities))
+
         probabilities /= sum(probabilities)
 
         # Randomly select questions based on calculated probabilities
