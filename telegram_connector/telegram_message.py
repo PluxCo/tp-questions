@@ -2,7 +2,6 @@
 Telegram message
 This module provides a wrapper around a Telegram message
 """
-import json
 import os
 from abc import ABC, abstractmethod
 
@@ -129,3 +128,30 @@ class TelegramTestMessage(TelegramMessage):
             self.message_id = resp.json()["sent_messages"][0]["message_id"]
             self._record.transfer(self.message_id)
             db.commit()
+
+
+class TelegramReplyMessage(TelegramMessage):
+    """
+    Class that represents a Telegram reply message.
+    Get rid of me as soon as you can!
+    """
+
+    def __init__(self, record: Record):
+        super().__init__(record)
+
+    def send(self):
+        with DBWorker() as db:
+            self._record = db.merge(self._record)
+            message = {
+                "user_id": self._record.person_id,
+                "text": "А на вопрос-то ответить забыли! Давай отвечай -_-",
+                "type": "REPLY",
+                "reply_to": self.message_id
+            }
+            resp = requests.post(self._destination, json={"service_id": self._service_id, "messages": [message]})
+            self.message_id = resp.json()["sent_messages"][0]["message_id"]
+            self._record.transfer(self.message_id)
+            db.commit()
+
+    def handle_answer(self, answer: dict):
+        ... - ... * ... + "Beep" - ...
