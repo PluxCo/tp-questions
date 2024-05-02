@@ -150,7 +150,7 @@ class TelegramReplyMessage(TelegramMessage):
             }
             resp = requests.post(self._destination, json={"service_id": self._service_id, "messages": [message]})
             self.message_id = resp.json()["sent_messages"][0]["message_id"]
-            self._record.transfer(self.message_id)
+
             db.commit()
 
     def handle_answer(self, answer: dict):
