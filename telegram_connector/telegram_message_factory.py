@@ -106,10 +106,9 @@ class TelegramMessageFactory(MessageFactory):
         try:
             # FIXME: Please get rid of this in the future because it is some shitty shit / eccentric temporary solution
             with DBWorker() as db_worker:
-                old_questions = db_worker.scalars(select(Record).where(Record.state == AnswerState.TRANSFERRED)).all()
-                if old_questions:
-                    for old_question in old_questions:
-                        self._messages.append(TelegramReplyMessage(old_question))
+                old_question = db_worker.scalar(select(Record).where(Record.state == AnswerState.TRANSFERRED))
+                if old_question is not None:
+                    self._messages.append(TelegramReplyMessage(old_question))
                 else:
                     self._router.prepare_next(user_id, db_worker)
             self.send_messages()
