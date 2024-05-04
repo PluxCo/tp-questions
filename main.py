@@ -9,7 +9,7 @@ from generator.generators import SmartGenerator
 from generator.router import PersonRouter
 
 logging.basicConfig(level=logging.INFO)
-logging.getLogger("api.resources").setLevel(logging.DEBUG)
+logging.getLogger("api").setLevel(logging.DEBUG)
 logging.getLogger("generator").setLevel(logging.DEBUG)
 logging.getLogger("telegram_connector").setLevel(logging.DEBUG)
 

@@ -2,6 +2,7 @@
 Describes generators used to generate records/questions for people.
 """
 import datetime
+import logging
 from abc import ABC, abstractmethod
 from typing import Union, Sequence
 
@@ -13,6 +14,8 @@ from core.questions import Question, QuestionGroupAssociation
 from db_connector import DBWorker
 from tools import Settings
 from users import Person
+
+logger = logging.getLogger(__name__)
 
 
 # noinspection GrazieInspection,Style,Annotator
@@ -163,6 +166,7 @@ class SmartGenerator(Generator):
         probabilities[np.isnan(probabilities)] = 10 * max_p
 
         if not any(probabilities) or np.isnan(max_p):
+            logger.warning(f"No available questions for {person}")
             probabilities = np.ones(len(probabilities))
 
         probabilities /= sum(probabilities)
