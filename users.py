@@ -70,7 +70,7 @@ class Person:
         all_groups = [m["groupId"] for m in resp["memberships"]]
 
         if "groupLevels" in resp["data"]:
-            person_groups = [(item["groupId"], item["level"]) for item in resp["data"]["groupLevels"]
+            person_groups = [(item["groupId"], int(item["level"])) for item in resp["data"]["groupLevels"]
                              if item["groupId"] in all_groups]
 
             return Person(person_id, person_groups)
