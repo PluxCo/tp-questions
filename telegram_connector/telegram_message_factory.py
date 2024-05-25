@@ -8,15 +8,17 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
-from core.answers import OpenRecord, TestRecord, Record
+from core.answers import OpenRecord, TestRecord, Record, AnswerState
 from core.routes import MessageFactory
 from db_connector import DBWorker
-from telegram_connector.telegram_message import TelegramOpenMessage, TelegramTestMessage, TelegramMessage
+from telegram_connector.telegram_message import TelegramOpenMessage, TelegramTestMessage, TelegramMessage, \
+    TelegramReplyMessage
 
 if TYPE_CHECKING:
     from generator.router import PersonRouter
 
 logger = logging.getLogger(__name__)
+
 
 # noinspection GrazieInspection,Style,Annotator
 class TelegramMessageFactory(MessageFactory):
@@ -102,7 +104,14 @@ class TelegramMessageFactory(MessageFactory):
         """
         logger.debug("Requesting delivery...")
         try:
-            self._router.prepare_next(user_id)
+            # FIXME: Please get rid of this in the future because it is some shitty shit / eccentric temporary solution
+            with DBWorker() as db_worker:
+                old_question = db_worker.scalar(select(Record).where(Record.person_id == user_id,
+                                                                     Record.state == AnswerState.TRANSFERRED))
+                if old_question is not None:
+                    self._messages.append(TelegramReplyMessage(old_question))
+                else:
+                    self._router.prepare_next(user_id, db_worker)
             self.send_messages()
         except Exception as e:
             logger.exception(e)
