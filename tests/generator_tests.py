@@ -1,4 +1,5 @@
 import datetime
+import time
 from unittest import TestCase
 
 # noinspection PyUnresolvedReferences
@@ -169,3 +170,42 @@ class SmartGenerationTestCase(TestCase):
         # Ensure that incorrect questions are asked more frequently than correct ones
         print(incorrect_question_asked_count, correct_question_asked_count)
         self.assertGreater(incorrect_question_asked_count, correct_question_asked_count)
+
+    def test_no_questions_available(self):
+        # Initialize an empty database
+        DBWorker.init_db_file("sqlite:///:memory:", force=True)
+        self.session = DBWorker().session
+
+        person = Person(user_id='user', groups=[('test 1', 2)])
+
+        # Try to generate a question when there are no questions available
+        question = SmartGenerator().next_bunch(person=person)
+
+        # Ensure no questions are returned
+        self.assertEqual(0,len(question))
+
+    def test_performance_large_database(self):
+        # Populate the database with a large number of questions
+        DBWorker.init_db_file("sqlite:///:memory:", force=True)
+        self.session = DBWorker().session
+        for i in range(10_000):
+            question = TestQuestion(id=i + 1,
+                                    text=f'Sample Question {i}',
+                                    subject='Sample Subject',
+                                    options=["option 1", "option 2", "option 3", "option 4"],
+                                    answer='1',
+                                    level=i % 5 + 1,
+                                    article_url='https://example.com')
+            self.session.add(question)
+            question_group = QuestionGroupAssociation(question_id=question.id, group_id=f'test {i % 2 + 1}')
+            self.session.add(question_group)
+        self.session.commit()
+
+        person = Person(user_id='user', groups=[('test 1', 2), ('test 2', 3)])
+
+        start_time = time.perf_counter_ns()
+        SmartGenerator().next_bunch(person=person)
+        end_time = time.perf_counter_ns()
+
+        # Ensure the operation completes within a reasonable time
+        self.assertLess((end_time - start_time)/10**9, 1)
