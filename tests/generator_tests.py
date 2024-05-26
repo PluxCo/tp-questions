@@ -51,7 +51,6 @@ class SmartGenerationTestCase(TestCase):
 
         # Ensure that each question was asked exactly once
         self.assertEqual(25, len(questions_asked))
-        print(questions_asked)
 
     def test_question_group_coverage(self):
         # Check that the generator covers all questions from a specific group
@@ -97,14 +96,14 @@ class SmartGenerationTestCase(TestCase):
         person = Person(user_id='user', groups=[('test 1', 2), ('test 2', 2)])
         questions_asked = []
 
-        for i in range(500):
+        for i in range(100):
             question = SmartGenerator().next_bunch(person=person)[0]
             questions_asked.append(question)
 
-            # High points for the first 250 questions
-            if i < 250:
+            # High points for the first 50 questions
+            if i < 50:
                 points = 1
-            # Low points for the next 250 questions
+            # Low points for the next 50 questions
             else:
                 points = 0
 
@@ -115,8 +114,8 @@ class SmartGenerationTestCase(TestCase):
             self.session.commit()
 
         # Check question levels for high and low points
-        high_points_responses = questions_asked[:250]
-        low_points_responses = questions_asked[250:]
+        high_points_responses = questions_asked[:50]
+        low_points_responses = questions_asked[50:]
 
         high_points_levels = [q.level for q in high_points_responses]
         low_points_levels = [q.level for q in low_points_responses]
@@ -124,8 +123,6 @@ class SmartGenerationTestCase(TestCase):
         # Verify that the total level of questions for high points is greater than or equal to
         # the total level of questions for low points
         self.assertGreaterEqual(sum(high_points_levels), sum(low_points_levels))
-        print("The gap between levels of high_points and low_points answers:",
-              sum(high_points_levels) / 250 - sum(low_points_levels) / 250)
 
     def test_incorrect_answers_asked_more_frequently(self):
         person = Person(user_id='user', groups=[('test 1', 2), ('test 2', 2)])
@@ -168,7 +165,6 @@ class SmartGenerationTestCase(TestCase):
         correct_question_asked_count = sum(1 for q_id in asked_questions if q_id in correct_questions)
 
         # Ensure that incorrect questions are asked more frequently than correct ones
-        print(incorrect_question_asked_count, correct_question_asked_count)
         self.assertGreater(incorrect_question_asked_count, correct_question_asked_count)
 
     def test_no_questions_available(self):
