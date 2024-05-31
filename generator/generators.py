@@ -93,7 +93,7 @@ class SmartGenerator(Generator):
         self._correcting_value = correcting_value
 
     def next_bunch(self, person, count: int = 1) -> Sequence[Union[Question, Record]]:
-        with DBWorker() as db:
+        with (DBWorker() as db):
             # Get planned questions
             planned = self._get_planned(person, db)
             if len(planned) >= count:
@@ -113,7 +113,7 @@ class SmartGenerator(Generator):
                                        where(Record.person_id == person.id,
                                              Record.question_id == question.id))
 
-                if points_sum:
+                if points_sum is not None:
                     last_answer = db.scalar(select(Record).
                                             join(Record.question).
                                             where(Record.person_id == person.id,
@@ -131,7 +131,9 @@ class SmartGenerator(Generator):
 
                     # P stands for probability. Here we are getting the ratio between number of points and
                     # the time of not answering.
-                    p = (datetime.datetime.now() - last_answer.ask_time).total_seconds() / points_sum
+                    p = (datetime.datetime.now() - last_answer.ask_time).total_seconds()
+                    p /= points_sum + self._correcting_value
+
 
                     # deciding whether the question has come at the right time or not with this crazy probability
                     p *= np.abs(np.cos(np.pi * np.log2(periods_count + self._mu))) ** (
