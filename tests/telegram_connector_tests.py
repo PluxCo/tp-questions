@@ -2,9 +2,11 @@ import datetime
 import os
 import unittest
 from unittest.mock import patch
+
 from requests import Response
 from sqlalchemy import select
 
+from api.api import app as flask_app
 from core.answers import OpenRecord, AnswerState, TestRecord
 from core.questions import OpenQuestion, TestQuestion
 from db_connector import DBWorker
@@ -345,27 +347,78 @@ class TestTelegramHandlingAnswers(unittest.TestCase):
         self.assertRaises(Exception, self.telegram_test_message.handle_answer, 1)
 
 
-# I don't ****ing know how to make webhook api working as separated module. Its keep making message factory error. Sry
-# class WebhookTests(unittest.TestCase):
-#     def setUp(self):
-#         self.router = PersonRouter(SimpleGenerator())
-#         self.app = app.test_client()
-#         DBWorker.init_db_file("sqlite:///:memory:", force=True)
-#         self.session = DBWorker().session
-#         logging.basicConfig(level=logging.DEBUG)
-#
-#     def tearDown(self):
-#         self.session.close()
-#
-#     def test_parse_only_required_arg(self):
-#         response = self.app.post('/webhook/', json={'type': 'FEEDBACK'})
-#         self.assertEqual(response.status_code, 400)
-#         response = self.app.post('/webhook/', json={'type': 'SESSION'})
-#         self.assertEqual(response.status_code, 400)
-#
-#     def test_standart_post_request(self):
-#         response = self.app.post('/webhook/', json={'type': 'FEEDBACK', 'feedback':
-#             {'type': 'MESSAGE', 'text': "lol"}, 'session': {'user_id': 'user_1', 'state': 'OPEN'}})
+class WebhookTests(unittest.TestCase):
+    def setUp(self):
+        self.router = PersonRouter(SimpleGenerator())
+        self.app = flask_app.test_client()
+
+        DBWorker.init_db_file("sqlite:///:memory:", force=True)
+        self.session = DBWorker().session
+        question = TestQuestion(text='Sample Question',
+                                id=3,
+                                subject='Sample Subject',
+                                options=["1", "2", "3", "4"],
+                                answer='1',
+                                level=1,
+                                article_url='https://example.com')
+
+        record = TestRecord(
+            question_id=question.id,
+            person_id='user_1',
+            message_id='1',
+            ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
+            state=AnswerState.NOT_ANSWERED,
+            points=0.5  # Set a non-default value for testing
+        )
+        self.session.add(question)
+        self.session.add(record)
+        question = OpenQuestion(
+            id=2,
+            text='Sample Question',
+            answer='1',
+            level=2,
+            type='OPEN'
+        )
+
+        record = OpenRecord(
+            question_id=question.id,
+            person_id='user_1',
+            message_id='2',
+            ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
+            state=AnswerState.NOT_ANSWERED,
+            points=0.5  # Set a non-default value for testing purposes
+        )
+        self.session.add(question)
+        self.session.add(record)
+        self.session.commit()
+
+    def tearDown(self):
+        self.session.close()
+        self.app = None
+
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com",
+                             "FUSIONAUTH_DOMAIN": "http://example.com"})
+    def test_regular_post_request_with_button_feedback(self):
+        self.response = self.app.post("/webhook/", json={'type': 'FEEDBACK',
+                                                         'feedback': {'type': 'BUTTON', 'message_id': '1',
+                                                                      'button_id': 1},
+                                                         'session': {'state': 'OPEN', 'user_id': 'user_1'}})
+        self.assertEqual(self.response.status_code, 200)
+
+    @patch.dict(os.environ, {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com",
+                             "FUSIONAUTH_DOMAIN": "http://example.com"})
+    def test_regular_post_request_with_reply_feedback(self):
+        self.response = self.app.post("/webhook/", json={'type': 'FEEDBACK',
+                                                         'feedback': {'type': 'REPLY', 'message_id': '2',
+                                                                      'text': 'Sample Answer'},
+                                                         'session': {'state': 'OPEN', 'user_id': 'user_1'}})
+        self.assertEqual(self.response.status_code, 200)
+
+    def test_regular_post_request_with_closing_session(self):
+        self.response = self.app.post("/webhook/", json={'type': 'SESSION',
+                                                         'session': {'state': 'CLOSE', 'user_id': 'user_1'}})
+        self.assertEqual(self.response.status_code, 200)
+
 
 class MessageFactoryWorkingTestCase(unittest.TestCase):
     def setUp(self):
@@ -406,4 +459,3 @@ class MessageFactoryWorkingTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
