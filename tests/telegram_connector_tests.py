@@ -12,7 +12,7 @@ from core.questions import OpenQuestion, TestQuestion
 from db_connector import DBWorker
 from generator.generators import SimpleGenerator
 from generator.router import PersonRouter
-from telegram_connector.telegram_message import TelegramOpenMessage, TelegramTestMessage
+from telegram_connector.telegram_message import TelegramOpenMessage, TelegramTestMessage, TelegramMessage
 from telegram_connector.telegram_message_factory import TelegramMessageFactory
 
 
@@ -57,6 +57,52 @@ class HelpfulGenerators:
             ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
             state=AnswerState.NOT_ANSWERED,
             points=0.5  # Set a non-default value for testing
+        )
+        session.add(question)
+        session.add(record)
+        session.commit()
+        return record
+
+    @staticmethod
+    def generate_test_record_with_message_id(session):
+        question = TestQuestion(text='Sample Question',
+                                id=3,
+                                subject='Sample Subject',
+                                options=["1", "2", "3", "4"],
+                                answer='1',
+                                level=1,
+                                article_url='https://example.com')
+
+        record = TestRecord(
+            question_id=question.id,
+            person_id='user_1',
+            message_id='1',
+            ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
+            state=AnswerState.NOT_ANSWERED,
+            points=0.5  # Set a non-default value for testing
+        )
+        session.add(question)
+        session.add(record)
+        session.commit()
+        return record
+
+    @staticmethod
+    def generate_open_record_with_person_id(session):
+        question = OpenQuestion(
+            id=2,
+            text='Sample Question',
+            answer='1',
+            level=2,
+            type='OPEN'
+        )
+
+        record = OpenRecord(
+            question_id=question.id,
+            person_id='user_1',
+            message_id='2',
+            ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
+            state=AnswerState.NOT_ANSWERED,
+            points=0.5  # Set a non-default value for testing purposes
         )
         session.add(question)
         session.add(record)
@@ -354,43 +400,8 @@ class WebhookTests(unittest.TestCase):
 
         DBWorker.init_db_file("sqlite:///:memory:", force=True)
         self.session = DBWorker().session
-        question = TestQuestion(text='Sample Question',
-                                id=3,
-                                subject='Sample Subject',
-                                options=["1", "2", "3", "4"],
-                                answer='1',
-                                level=1,
-                                article_url='https://example.com')
-
-        record = TestRecord(
-            question_id=question.id,
-            person_id='user_1',
-            message_id='1',
-            ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
-            state=AnswerState.NOT_ANSWERED,
-            points=0.5  # Set a non-default value for testing
-        )
-        self.session.add(question)
-        self.session.add(record)
-        question = OpenQuestion(
-            id=2,
-            text='Sample Question',
-            answer='1',
-            level=2,
-            type='OPEN'
-        )
-
-        record = OpenRecord(
-            question_id=question.id,
-            person_id='user_1',
-            message_id='2',
-            ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
-            state=AnswerState.NOT_ANSWERED,
-            points=0.5  # Set a non-default value for testing purposes
-        )
-        self.session.add(question)
-        self.session.add(record)
-        self.session.commit()
+        HelpfulGenerators.generate_open_record_with_person_id(self.session)
+        HelpfulGenerators.generate_test_record_with_message_id(self.session)
 
     def tearDown(self):
         self.session.close()
@@ -425,10 +436,10 @@ class MessageFactoryWorkingTestCase(unittest.TestCase):
         DBWorker.init_db_file("sqlite:///:memory:", force=True)
 
         self.session = DBWorker().session
-        self.open_record = HelpfulGenerators.generate_open_record(self.session)
-        self.test_record = HelpfulGenerators.generate_test_record(self.session)
         self.router = PersonRouter(SimpleGenerator())
         self.factory = TelegramMessageFactory(self.router)
+        self.open_record = HelpfulGenerators.generate_open_record_with_person_id(self.session)
+        self.test_record = HelpfulGenerators.generate_test_record_with_message_id(self.session)
 
     def tearDown(self):
         self.session.close()
@@ -455,6 +466,34 @@ class MessageFactoryWorkingTestCase(unittest.TestCase):
         self.assertEqual(mock_post.mock_calls[1][2]['json']['messages'][0],
                          {'user_id': 'user_1', 'type': 'WITH_BUTTONS', 'text': 'Sample Question',
                           'buttons': ['Не знаю', '1', '2', '3', '4']})
+
+    def test_get_record_is_working_with_test_record(self):
+        resp = self.factory.get_record(self.test_record.message_id)
+        self.assertEqual(self.test_record.message_id, resp.message_id)
+        self.assertEqual(self.test_record.person_id, resp.person_id)
+
+    def test_get_record_is_working_with_open_record(self):
+        resp = self.factory.get_record(self.open_record.message_id)
+        self.assertEqual(self.open_record.message_id, resp.message_id)
+        self.assertEqual(self.open_record.person_id, resp.person_id)
+
+    @patch.dict(os.environ,
+                {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    def test_get_message_is_working_with_open_record(self):
+        resp = self.factory.get_message(self.open_record.message_id)
+        self.assertEqual(self.open_record.message_id, resp.message_id)
+        self.assertEqual(True, isinstance(resp, TelegramMessage))
+        self.assertEqual(self.open_record.person_id, resp._record.person_id)
+
+    @patch.dict(os.environ,
+                {"QUESTIONS_URL": "http://example.com", "TELEGRAM_API": "http://example.com"})
+    def test_get_message_is_working_with_test_record(self):
+        resp = self.factory.get_message(self.test_record.message_id)
+        self.assertEqual(self.test_record.message_id, resp.message_id)
+        self.assertEqual(True, isinstance(resp, TelegramMessage))
+        self.assertEqual(self.test_record.person_id, resp._record.person_id)
+
+
 
 
 if __name__ == '__main__':
