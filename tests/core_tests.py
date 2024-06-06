@@ -1,4 +1,7 @@
 import datetime
+import os
+import random
+import time
 import unittest
 from unittest import TestCase
 from unittest.mock import Mock
@@ -93,6 +96,18 @@ class SingleTestQuestionTestCase(unittest.TestCase):
         # Clean up resources after each test
         cls.session.close()
 
+    def test_add_one_more_question(self):
+        test_question = OpenQuestion(text='Sample Question',
+                                     subject='Sample Subject',
+                                     answer='Test Message',
+                                     level=2,
+                                     article_url='https://example.com')
+        self.session.add(test_question)
+
+        count = self.session.scalar(select(func.count(Question.id)))
+
+        self.assertEqual(count, 2)
+
     def test_instances(self):
         self.assertIsInstance(self.question, Question)
         self.assertIsInstance(self.question, TestQuestion)
@@ -150,6 +165,19 @@ class SingleOpenQuestionTestCase(unittest.TestCase):
         self.assertEqual(question.answer, 'Test Message')
         self.assertEqual(question.level, 2)
         self.assertEqual(question.article_url, 'https://example.com')
+
+    def test_add_one_more_question(self):
+        test_question = TestQuestion(text='Sample Question',
+                                     subject='Sample Subject',
+                                     options=["option 1", "option 2", "option 3"],
+                                     answer='1',
+                                     level=2,
+                                     article_url='https://example.com')
+        self.session.add(test_question)
+
+        count = self.session.scalar(select(func.count(Question.id)))
+
+        self.assertEqual(count, 2)
 
     def test_instances(self):
         self.assertIsInstance(self.question, Question)
@@ -365,6 +393,19 @@ class RecordCreationTestCase(unittest.TestCase):
         self.session.add(record)
         self.session.commit()
 
+    def test_test_record_creation_messed_up(self):
+        self.assertRaises(Exception, OpenRecord, id=1, text='Sample Question',
+                          options='["Option 1", "Option 2", "Option 3"]',
+                          answer=1,
+                          level=2,
+                          type='TEST')
+        self.assertRaises(Exception, OpenQuestion, question_id=1,
+                          person_id='user_1',
+                          person_answer='1',
+                          ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
+                          state=AnswerState.NOT_ANSWERED,
+                          points=0.5)  # Set a non-default value for testing purposes)
+
 
 class SingleTestRecordTestCase(unittest.TestCase):
     record = None
@@ -396,6 +437,20 @@ class SingleTestRecordTestCase(unittest.TestCase):
         cls.session.add(question)
         cls.session.add(cls.record)
         cls.session.commit()
+
+    def test_add_one_more_record(self):
+        new_record = OpenRecord(question_id=1,
+                                person_id='user_1',
+                                person_answer='That\'s an open question for sure',
+                                ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
+                                state=AnswerState.NOT_ANSWERED,
+                                points=0.5  # Set a non-default value for testing)
+                                )
+        self.session.add(new_record)
+
+        count = self.session.scalar(select(func.count(Record.id)))
+
+        self.assertEqual(count, 2)
 
     @classmethod
     def tearDownClass(cls):
@@ -498,6 +553,21 @@ class SingleOpenRecordTestCase(unittest.TestCase):
         cls.session.add(cls.record)
         cls.session.commit()
 
+    def test_add_one_more_record(self):
+        new_record = TestRecord(
+            question_id=1,
+            person_id='user_1',
+            person_answer='1',
+            ask_time=datetime.datetime(2024, 1, 1, 12, 0, 0),
+            state=AnswerState.NOT_ANSWERED,
+            points=0.5  # Set a non-default value for testing
+        )
+        self.session.add(new_record)
+
+        count = self.session.scalar(select(func.count(Record.id)))
+
+        self.assertEqual(count, 2)
+
     @classmethod
     def tearDownClass(cls):
         # Clean up resources after each test
@@ -599,6 +669,20 @@ class OpenRecordCRUDTestCase(TestCase):
         # Clean up resources after each test
         self.session.close()
 
+    def test_attributes(self):
+        question = self.session.get(Question, 1)
+        self.assertEqual(question.text, 'Sample Question')
+        self.assertEqual(question.answer, 'That\'s the answer...')
+        self.assertEqual(question.level, 2)
+        self.assertEqual(question.type, 'OPEN')
+
+        self.assertEqual(self.record.question_id, question.id)
+        self.assertEqual(self.record.person_id, 'user_1')
+        self.assertEqual(self.record.person_answer, 'That\'s an open question for sure')
+        self.assertEqual(self.record.ask_time, datetime.datetime(2024, 1, 1, 12, 0, 0))
+        self.assertEqual(self.record.state, AnswerState.NOT_ANSWERED)
+        self.assertEqual(self.record.points, 0.5)
+
     def test_edit(self):
         self.record.person_id = 'user_2'
         self.record.person_answer = 'That\'s a test question for sure (NOPE)'
@@ -655,6 +739,20 @@ class TestRecordCRUDTestCase(TestCase):
         # Clean up resources after each test
         self.session.close()
 
+    def test_attributes(self):
+        self.assertEqual(self.question.text, 'Sample Question')
+        self.assertEqual(self.question.options, ["BAbE", "Gabe", "LAbe"])
+        self.assertEqual(self.question.answer, '1')
+        self.assertEqual(self.question.level, 2)
+        self.assertEqual(self.question.type, 'TEST')
+
+        self.assertEqual(self.record.question_id, self.question.id)
+        self.assertEqual(self.record.person_id, 'user_1')
+        self.assertEqual(self.record.person_answer, '1')
+        self.assertEqual(self.record.ask_time, datetime.datetime(2024, 1, 1, 12, 0, 0))
+        self.assertEqual(self.record.state, AnswerState.NOT_ANSWERED)
+        self.assertEqual(self.record.points, 0.5)
+
     def test_edit(self):
         self.record.person_id = 'user_2'
         self.record.person_answer = '2'
@@ -689,6 +787,100 @@ class TestRecordCRUDTestCase(TestCase):
         self.session.delete(self.question)
         count = self.session.scalar(select(func.count(Record.id)).where(Record.id == record_id))
         self.assertEqual(0, count)
+
+
+class PerformanceTestCase(TestCase):
+    def tearDown(self):
+        pass
+
+    def setUp(self):
+        ticks = []
+        for _ in range(10_000):
+            start_tick = time.perf_counter_ns()
+            end_tick = time.perf_counter_ns()
+            ticks.append(end_tick - start_tick)
+        self.tick = sum(ticks) / 10_000
+
+    def test_session_opening(self):
+        start = time.perf_counter_ns()
+        DBWorker.init_db_file("sqlite:///test.db", force=True)
+        self.session = DBWorker().session
+        end = time.perf_counter_ns()
+
+        elapsed_time = (end - start) / self.tick
+        # needs logger
+        # print("Elapsed Time:", elapsed_time)
+        self.session.close()
+        DBWorker._engine.dispose()
+        os.remove("test.db")
+        self.assertLess(elapsed_time, 1_000_000)
+
+    def test_question_creation(self):
+        DBWorker.init_db_file("sqlite:///test.db", force=True)
+        self.session = DBWorker().session
+        list_of_questions = [OpenQuestion(text=f"Question number {i}",
+                                          subject='Sample Subject',
+                                          answer='That is an answer',
+                                          level=random.randint(0, i),
+                                          article_url='https://example.com') for i in range(1000)]
+        self.session.add_all(list_of_questions)
+        start = time.perf_counter_ns()
+        self.session.commit()
+        end = time.perf_counter_ns()
+
+        elapsed_time = (end - start) / self.tick
+        # needs logger
+        # print("Elapsed Time:", elapsed_time)
+        self.session.close()
+        DBWorker._engine.dispose()
+        os.remove("test.db")
+        self.assertLess(elapsed_time, 800_000)
+
+    def test_delete_performance(self):
+        DBWorker.init_db_file("sqlite:///test.db", force=True)
+        self.session = DBWorker().session
+        list_of_questions = [OpenQuestion(text=f"Question number {i}",
+                                          subject='Sample Subject',
+                                          answer='That is an answer',
+                                          level=random.randint(0, i),
+                                          article_url='https://example.com') for i in range(1000)]
+        self.session.add_all(list_of_questions)
+        self.session.commit()
+        for i in range(1, len(list_of_questions)):
+            self.session.delete(list_of_questions[i])
+        start = time.perf_counter_ns()
+        self.session.commit()
+        end = time.perf_counter_ns()
+
+        elapsed_time = (end - start) / self.tick
+        self.session.close()
+        DBWorker._engine.dispose()
+        os.remove("test.db")
+        self.assertLess(elapsed_time, 500_000)
+
+    def test_question_editing(self):
+        DBWorker.init_db_file("sqlite:///test.db", force=True)
+        self.session = DBWorker().session
+        list_of_questions = [OpenQuestion(text=f"Question number {i}",
+                                          subject='Sample Subject',
+                                          answer='That is an answer',
+                                          level=random.randint(0, i),
+                                          article_url='https://example.com') for i in range(1000)]
+        self.session.add_all(list_of_questions)
+        self.session.commit()
+
+        for i in range(1, len(list_of_questions)):
+            list_of_questions[i].text = f"Question number {i} with changes"
+
+        start = time.perf_counter_ns()
+        self.session.commit()
+        end = time.perf_counter_ns()
+        elapsed_time = (end - start) / self.tick
+
+        self.session.close()
+        DBWorker._engine.dispose()
+        os.remove("test.db")
+        self.assertLess(elapsed_time, 5_000_000)
 
 
 if __name__ == '__main__':
